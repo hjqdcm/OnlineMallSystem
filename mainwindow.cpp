@@ -10,8 +10,12 @@ MainWindow::MainWindow(QWidget *parent)
 {
     setupUI();
     setupConnections();
+
+    // 先加载用户数据
     loadUsersFromSettings();
+    // 再加载商品数据
     loadProductsFromSettings();
+
     showLoginScreen();
 
     // 如果没有加载到商品，添加一些示例商品
@@ -27,13 +31,25 @@ MainWindow::MainWindow(QWidget *parent)
         saveProductsToSettings();
     }
 
+    // 为测试用户添加一些购买历史和发布商品（仅用于演示）
+    if (allUsers.size() > 0) {
+        User* testUser = allUsers[0];
+        // 确保测试用户有一些数据用于演示
+        if (testUser->getUsername() == "test" && testUser->getPurchaseHistory().isEmpty()) {
+            // 可以为测试用户添加一些示例数据
+            qDebug() << "测试用户数据已初始化";
+        }
+    }
+
     populateProductList();
 }
 
 MainWindow::~MainWindow()
 {
-    saveUsersToSettings(); // 程序关闭前保存用户数据
-    saveProductsToSettings(); // 保存商品数据
+    // 保存所有数据
+    saveUsersToSettings();
+    saveProductsToSettings();
+
     // 清理内存
     for(User* user : allUsers) {
         delete user;
@@ -48,15 +64,15 @@ void MainWindow::saveUsersToSettings()
     // 保存用户数量
     settings->setValue("userCount", allUsers.size());
 
-    // 保存每个用户的信息
+    // 保存每个用户的完整信息
     for (int i = 0; i < allUsers.size(); ++i) {
         QString prefix = "users/user" + QString::number(i);
-        settings->setValue(prefix + "/username", allUsers[i]->getUsername());
-        settings->setValue(prefix + "/password", allUsers[i]->getPassword());
-        settings->setValue(prefix + "/email", allUsers[i]->getEmail());
+        QJsonObject userJson = allUsers[i]->toJson();
+        QString jsonString = QString::fromUtf8(QJsonDocument(userJson).toJson(QJsonDocument::Compact));
+        settings->setValue(prefix, jsonString);
     }
 
-    qDebug() << "用户数据已保存";
+    qDebug() << "用户数据已保存，共" << allUsers.size() << "个用户";
 }
 
 void MainWindow::loadUsersFromSettings()
@@ -75,14 +91,17 @@ void MainWindow::loadUsersFromSettings()
     // 加载每个用户
     for (int i = 0; i < userCount; ++i) {
         QString prefix = "users/user" + QString::number(i);
-        QString username = settings->value(prefix + "/username").toString();
-        QString password = settings->value(prefix + "/password").toString();
-        QString email = settings->value(prefix + "/email").toString();
+        QString jsonString = settings->value(prefix).toString();
 
-        if (!username.isEmpty() && !password.isEmpty()) {
-            User* user = new User(username, password, email);
-            allUsers.append(user);
-            qDebug() << "加载用户:" << username;
+        if (!jsonString.isEmpty()) {
+            QJsonDocument doc = QJsonDocument::fromJson(jsonString.toUtf8());
+            if (!doc.isNull() && doc.isObject()) {
+                User* user = User::fromJson(doc.object());
+                allUsers.append(user);
+                qDebug() << "加载用户:" << user->getUsername()
+                         << "购买历史:" << user->getPurchaseHistory().size()
+                         << "发布商品:" << user->getPublishedProducts().size();
+            }
         }
     }
 
@@ -500,6 +519,12 @@ void MainWindow::onPurchaseProduct()
         return;
     }
 
+    // 检查商品是否可选（防止用户通过其他方式选择自己的商品）
+    if (!(currentItem->flags() & Qt::ItemIsEnabled)) {
+        QMessageBox::warning(this, "购买失败", "不能购买自己发布的商品");
+        return;
+    }
+
     // 获取选中的商品ID
     QString productId = currentItem->data(Qt::UserRole).toString();
 
@@ -529,40 +554,51 @@ void MainWindow::onPurchaseProduct()
         return;
     }
 
-    if (currentUser && currentUser->purchaseProduct(currentItem->data(Qt::UserRole).toString(), allProducts)) {
+    // 执行购买
+    if (currentUser && currentUser->purchaseProduct(productId, allProducts)) {
         QMessageBox::information(this, "购买成功", "商品购买成功！");
 
         // 保存商品数据（更新购买状态）
         saveProductsToSettings();
+        // 保存用户数据（更新购买历史）
+        saveUsersToSettings();
 
         // 刷新商品列表，已购买的商品将不再显示
         populateProductList();
     } else {
-        QMessageBox::warning(this, "购买失败", "购买失败，商品可能已被其他人购买");
+        QMessageBox::warning(this, "购买失败", "购买失败，请重试");
     }
 }
 
 void MainWindow::onViewPurchaseHistory()
 {
     if (currentUser) {
-        QList<QString> history = currentUser->viewPurchaseHistory();
-        QString historyText = "购买历史:\n";
+        QList<QString> history = currentUser->getPurchaseHistory();
+        QString historyText = "购买历史:\n\n";
+
         if (history.isEmpty()) {
             historyText += "暂无购买记录";
         } else {
             for (const QString& productId : history) {
                 // 在商品列表中查找商品信息
+                bool found = false;
                 for (const Product& product : allProducts) {
                     if (product.getProductId() == productId) {
-                        historyText += QString("%1 - ¥%2 - 卖家: %3\n")
+                        historyText += QString("📦 %1\n   价格: ¥%2\n   卖家: %3\n   时间: 未知\n\n")
                                            .arg(product.getProductName())
                                            .arg(product.getPrice())
-                                           .arg(product.getSellerId());
+                                           .arg(product.getSellerName());
+                        found = true;
                         break;
                     }
                 }
+
+                if (!found) {
+                    historyText += QString("📦 商品ID: %1 (商品信息缺失)\n\n").arg(productId);
+                }
             }
         }
+
         QMessageBox::information(this, "购买历史", historyText);
     }
 }
@@ -577,6 +613,10 @@ void MainWindow::onAddToFavorites()
 
     if (currentUser) {
         currentUser->addToFavorites(currentItem->data(Qt::UserRole).toString());
+
+        // 保存用户数据（更新收藏列表）
+        saveUsersToSettings();
+
         QMessageBox::information(this, "收藏成功", "商品已添加到收藏夹！");
     }
 }
@@ -622,8 +662,10 @@ void MainWindow::onPublishProduct()
 
             // 保存商品数据
             saveProductsToSettings();
+            // 保存用户数据（更新发布的商品列表）
+            saveUsersToSettings();
 
-            // 刷新商品列表
+            // 刷新商品列表，新发布的商品将显示在购买页面
             populateProductList();
         } else {
             QMessageBox::warning(this, "发布失败", "商品发布失败");
@@ -635,20 +677,23 @@ void MainWindow::onViewSalesStatus()
 {
     if (currentUser) {
         QList<QString> status = currentUser->viewSalesStatus(allProducts);
-        QString statusText = "销售状态:\n";
+        QString statusText = "📊 销售状态\n\n";
+
         for (const QString& line : status) {
             statusText += line + "\n";
         }
-        QMessageBox::information(this, "销售状态", statusText);
 
         // 显示已售商品详情
         QList<QString> soldProducts = currentUser->viewSoldProducts(allProducts);
         if (!soldProducts.isEmpty()) {
-            statusText += "\n已售商品:\n";
+            statusText += "\n已售商品详情:\n";
             for (const QString& product : soldProducts) {
-                statusText += product + "\n";
+                statusText += "✅ " + product + "\n";
             }
-            QMessageBox::information(this, "销售详情", statusText);
+        } else {
+            statusText += "\n暂无已售商品";
         }
+
+        QMessageBox::information(this, "销售状态", statusText);
     }
 }
