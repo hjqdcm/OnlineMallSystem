@@ -23,9 +23,15 @@
 - 
 - ## 项目结构
 OnlineMallSystem/
+
 ├── main.cpp # 程序入口
+
 ├── mainwindow.h/cpp # 主窗口类
+
 ├── user.h/cpp # 用户管理类
+
 ├── product.h/cpp # 商品管理类
+
 ├── CMakeLists.txt # 构建配置
+
 └── README.md # 项目说明
