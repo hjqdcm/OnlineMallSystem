@@ -1,48 +1,48 @@
-QT       += core gui
-
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
-
-CONFIG += c++17
-
-# You can make your code fail to compile if it uses deprecated APIs.
-# In order to do so, uncomment the following line.
-#DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
-
-SOURCES += \
-    # main.cpp \
-    mainwindow.cpp \
-    product.cpp \
-    # test_integration.cpp \
-    # test_integration_main.cpp \
-    test_main.cpp \
-    test_product.cpp \
-    test_user.cpp \
-    user.cpp
-
-HEADERS += \
-    mainwindow.h \
-    product.h \
-    # test_integration.h \
-    test_product.h \
-    test_user.h \
-    user.h
-
-FORMS += \
-    mainwindow.ui
-
-# Default rules for deployment.
-qnx: target.path = /tmp/$${TARGET}/bin
-else: unix:!android: target.path = /opt/$${TARGET}/bin
-!isEmpty(target.path): INSTALLS += target
-QMAKE_CXXFLAGS += -Wall -Wextra
-QMAKE_CXX_CLANG_TIDY = clang-tidy -header-filter=.*
-
-QT += testlib
-CONFIG += testcase
-
-# integration_test {
-#     # 集成测试配置
-#     TARGET = OnlineMallIntegrationTests
+#QT       += core gui
+#
+#greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+#
+#CONFIG += c++17
+#
+## You can make your code fail to compile if it uses deprecated APIs.
+## In order to do so, uncomment the following line.
+##DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
+#
+#SOURCES += \
+#    # main.cpp \
+#    mainwindow.cpp \
+#    product.cpp \
+#    # test_integration.cpp \
+#    # test_integration_main.cpp \
+#    test_main.cpp \
+#    test_product.cpp \
+#    test_user.cpp \
+#    user.cpp
+#
+#HEADERS += \
+#    mainwindow.h \
+#    product.h \
+#    # test_integration.h \
+#    test_product.h \
+#    test_user.h \
+#    user.h
+#
+#FORMS += \
+#    mainwindow.ui
+#
+## Default rules for deployment.
+#qnx: target.path = /tmp/$${TARGET}/bin
+#else: unix:!android: target.path = /opt/$${TARGET}/bin
+#!isEmpty(target.path): INSTALLS += target
+#QMAKE_CXXFLAGS += -Wall -Wextra
+#QMAKE_CXX_CLANG_TIDY = clang-tidy -header-filter=.*
+#
+#QT += testlib
+#CONFIG += testcase
+#
+## integration_test {
+##     # 集成测试配置
+##     TARGET = OnlineMallIntegrationTests
 
 #     # 添加集成测试源文件
 #     SOURCES += tests/test_integration.cpp
@@ -68,3 +68,29 @@ CONFIG += testcase
 #     CONFIG -= testcase
 # }
 
+QT += core gui
+
+greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+
+CONFIG += c++17
+
+SOURCES += \
+    main.cpp \
+    mainwindow.cpp \
+    product.cpp \
+    user.cpp
+
+HEADERS += \
+    mainwindow.h \
+    product.h \
+    user.h
+
+FORMS += \
+    mainwindow.ui
+
+# Default rules for deployment.
+qnx: target.path = /tmp/$${TARGET}/bin
+else: unix:!android: target.path = /opt/$${TARGET}/bin
+!isEmpty(target.path): INSTALLS += target
+
+QMAKE_CXXFLAGS += -Wall -Wextra

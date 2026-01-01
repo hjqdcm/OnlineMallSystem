@@ -5,94 +5,31 @@ on:
     branches: [main, master, develop]
   pull_request:
     branches: [main, master, develop]
-  workflow_dispatch:
 
 jobs:
   unit-tests:
     runs-on: ubuntu-latest
-
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Install Qt6 and dependencies
+      
+      - name: Install Qt6
+        run: sudo apt-get update && sudo apt-get install -y qt6-base-dev qt6-base-dev-tools
+      
+      - name: Build tests
         run: |
-          sudo apt-get update
-          sudo apt-get install -y qt6-base-dev qt6-base-dev-tools qt6-tools-dev libqt6core6 libqt6gui6 libqt6test6 libgl1-mesa-dev
-
-      - name: Create tests.pro file
-        run: |
-          cat > tests.pro << 'EOF'
-QT += core testlib
-
-CONFIG += c++17 testcase console
-
-TARGET = OnlineMallTests
-
-SOURCES += \
-    test_main.cpp \
-    test_user.cpp \
-    test_product.cpp \
-    user.cpp \
-    product.cpp
-
-HEADERS += \
-    test_user.h \
-    test_product.h \
-    user.h \
-    product.h
-
-INCLUDEPATH += . ..
-
-DESTDIR = $$PWD
-EOF
-          echo "tests.pro 文件创建完成"
-
-      - name: Build tests with qmake
-        run: |
-          echo "检查Qt安装..."
-          dpkg -l | grep qt6 | head -5
-          
-          if command -v qmake6 > /dev/null 2>&1; then
-            QMAKE_CMD="qmake6"
-          elif command -v qmake-qt6 > /dev/null 2>&1; then
-            QMAKE_CMD="qmake-qt6"
-          elif command -v qmake > /dev/null 2>&1; then
-            QMAKE_CMD="qmake"
-          else
-            echo "错误: 未找到qmake命令"
-            exit 1
-          fi
-          
-          echo "使用 qmake 命令: $QMAKE_CMD"
-          $QMAKE_CMD --version
-          
-          mkdir -p build
-          cd build
-          
-          $QMAKE_CMD CONFIG+=testcase CONFIG+=console ../tests.pro
-          make -j$(nproc)
-          
-          echo "构建完成，检查文件:"
-          ls -la
-
+          mkdir -p build && cd build
+          qmake6 ../tests.pro || qmake-qt6 ../tests.pro || qmake ../tests.pro
+          make -j4
+      
       - name: Run tests
         run: |
           cd build
           if [ -f "OnlineMallTests" ]; then
-            echo "=== 运行单元测试 ==="
             ./OnlineMallTests
           else
-            echo "错误: 未找到测试可执行文件"
-            echo "尝试查找其他可执行文件..."
-            find . -type f -executable
+            echo "Test executable not found"
+            ls -la
             exit 1
           fi
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-output
-          path: build/
-          retention-days: 7

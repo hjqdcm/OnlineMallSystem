@@ -1,4 +1,4 @@
-# tests.pro - 专门用于构建和运行测试
+# tests.pro
 QT += core testlib
 
 CONFIG += c++17 testcase console
@@ -18,8 +18,6 @@ HEADERS += \
     user.h \
     product.h
 
-# 包含当前目录和上级目录
 INCLUDEPATH += . ..
 
-# 设置输出
 DESTDIR = $$PWD
