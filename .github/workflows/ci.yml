@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, master ]
 
 jobs:
   build:
@@ -14,7 +14,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Qt
+      - name: Set up Qt 6.7
         uses: qt-actions/setup-qt@v2
         with:
           version: "6.7.0"
@@ -22,11 +22,24 @@ jobs:
           target: gcc_64
 
       - name: Install build dependencies
-        run: sudo apt-get update; sudo apt-get install -y build-essential libxcb-xinerama0 libfontconfig1
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential g++ make libxcb-xinerama0 libfontconfig1
+
+      - name: Locate .pro file
+        id: find-pro
+        run: |
+          PRO=$(ls *.pro 2>/dev/null | head -n1 || true)
+          if [ -z "$PRO" ]; then
+            echo "No .pro file found in repository"; exit 1
+          fi
+          echo "PRO_FILE=$PRO" >> $GITHUB_OUTPUT
 
       - name: Run qmake
         run: |
-          qmake 4.pro -r
+          qmake "$PRO_FILE"
+        env:
+          PRO_FILE: ${{ steps.find-pro.outputs.PRO_FILE }}
 
       - name: Build
         run: |
@@ -38,94 +51,8 @@ jobs:
 
       - name: Smoke test (binary existence)
         run: |
-          # Try to guess produced binary; fail if no executable found in repository
-          BIN=$(find . -maxdepth 2 -type f -executable -name "*" | head -n 1 || true)
+          BIN=$(find . -maxdepth 3 -type f -perm -111 -print | head -n 1 || true)
           echo "First executable found: $BIN"
           if [ -z "$BIN" ]; then
-            echo "No executable found after build - check qmake output"; exit 1
-          finame: Qt qmake CI
-
-on:
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
-
-jobs:
-  build-and-test:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-    
-    - name: Install Qt6 and dependencies
-      run: |
-        sudo apt-get update
-        echo "安装Qt6和构建工具..."
-        sudo apt-get install -y \
-          qt6-base-dev \
-          qt6-base-dev-tools \
-          qt6-tools-dev \
-          qt6-tools-dev-tools \
-          qt6-l10n-tools \
-          libqt6core6 \
-          libqt6widgets6 \
-          libqt6test6 \
-          build-essential \
-          g++ \
-          make
-        
-        echo "Qt版本信息:"
-        qmake6 --version || true
-        echo "g++版本:"
-        g++ --version
-    
-    - name: Build main application
-      run: |
-        echo "=== 构建主程序 ==="
-        
-        # 检查.pro文件是否存在
-        if [ -f "OnlineMallSystem.pro" ]; then
-          echo "使用OnlineMallSystem.pro构建"
-          PRO_FILE="OnlineMallSystem.pro"
-        elif [ -f "*.pro" ]; then
-          echo "使用找到的.pro文件构建"
-          PRO_FILE=$(ls *.pro | head -1)
-        else
-          echo "错误: 未找到.pro文件"
-          exit 1
-        fi
-        
-        echo "使用项目文件: $PRO_FILE"
-        
-        # 生成Makefile
-        qmake6 $PRO_FILE
-        
-        # 构建程序
-        make -j$(nproc)
-        
-        # 检查是否构建成功
-        if [ -f "./OnlineMallSystem" ]; then
-          echo "✅ 主程序构建成功"
-          file ./OnlineMallSystem
-        else
-          echo "⚠️  主程序未找到，尝试查找其他可执行文件"
-          find . -name "*OnlineMallSystem*" -type f -executable 2>/dev/null || true
-          find . -name "*.pro" -exec basename {} .pro \; | while read name; do
-            if [ -f "./$name" ]; then
-              echo "✅ 找到可执行文件: $name"
-              file ./$name
-            fi
-          done
-        fi
-    
-    - name: Build test applications with qmake
-      run: |
-        echo "=== 使用qmake构建测试程序 ==="
-        
-        # 为test_user创建.pro文件
-        if [ -f "test_user.cpp" ]; then
-          echo "构建 test_user..."
-          
-          cat > test_user.pro << 'EOF'
+            echo "No executable found after build - check qmake/make output"; exit 1
+          fi
