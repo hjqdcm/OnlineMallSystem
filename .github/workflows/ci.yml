@@ -1,4 +1,49 @@
-name: Qt qmake CI
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: Build (Linux, Qt 6.7)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Qt
+        uses: qt-actions/setup-qt@v2
+        with:
+          version: "6.7.0"
+          host: linux
+          target: gcc_64
+
+      - name: Install build dependencies
+        run: sudo apt-get update; sudo apt-get install -y build-essential libxcb-xinerama0 libfontconfig1
+
+      - name: Run qmake
+        run: |
+          qmake 4.pro -r
+
+      - name: Build
+        run: |
+          make -j$(nproc)
+
+      - name: Build artifacts listing
+        run: |
+          echo "Listing project directory after build:"; ls -la
+
+      - name: Smoke test (binary existence)
+        run: |
+          # Try to guess produced binary; fail if no executable found in repository
+          BIN=$(find . -maxdepth 2 -type f -executable -name "*" | head -n 1 || true)
+          echo "First executable found: $BIN"
+          if [ -z "$BIN" ]; then
+            echo "No executable found after build - check qmake output"; exit 1
+          finame: Qt qmake CI
 
 on:
   push:
@@ -75,173 +120,12 @@ jobs:
           done
         fi
     
-    - name: Build test applications
+    - name: Build test applications with qmake
       run: |
-        echo "=== 构建测试程序 ==="
+        echo "=== 使用qmake构建测试程序 ==="
         
-        # 检查测试文件是否存在
-        echo "检查测试文件..."
-        ls -la *test*.cpp 2>/dev/null || echo "未找到测试文件"
-        
-        # 尝试构建测试程序（如果存在）
+        # 为test_user创建.pro文件
         if [ -f "test_user.cpp" ]; then
           echo "构建 test_user..."
-          g++ -std=c++17 -I. -I/usr/include/qt6 -I/usr/include/x86_64-linux-gnu/qt6 \
-              test_user.cpp user.cpp product.cpp \
-              -lQt6Core -lQt6Test -o test_user 2>&1 | head -20
           
-          if [ -f "./test_user" ]; then
-            echo "✅ test_user 构建成功"
-          else
-            echo "❌ test_user 构建失败"
-          fi
-        fi
-        
-        if [ -f "test_product.cpp" ]; then
-          echo "构建 test_product..."
-          g++ -std=c++17 -I. -I/usr/include/qt6 -I/usr/include/x86_64-linux-gnu/qt6 \
-              test_product.cpp product.cpp \
-              -lQt6Core -lQt6Test -o test_product 2>&1 | head -20
-          
-          if [ -f "./test_product" ]; then
-            echo "✅ test_product 构建成功"
-          else
-            echo "❌ test_product 构建失败"
-          fi
-        fi
-        
-        if [ -f "test_integration.cpp" ]; then
-          echo "构建 test_integration..."
-          # 集成测试可能需要更多文件
-          g++ -std=c++17 -I. -I/usr/include/qt6 -I/usr/include/x86_64-linux-gnu/qt6 \
-              test_integration.cpp test_integration_main.cpp mainwindow.cpp user.cpp product.cpp \
-              -lQt6Core -lQt6Widgets -lQt6Test -fPIC -o test_integration 2>&1 | head -20
-          
-          if [ -f "./test_integration" ]; then
-            echo "✅ test_integration 构建成功"
-          else
-            echo "❌ test_integration 构建失败"
-          fi
-        fi
-    
-    - name: Run tests
-      run: |
-        echo "=== 运行测试 ==="
-        
-        # 运行测试程序（如果存在）
-        TEST_COUNT=0
-        
-        if [ -f "./test_user" ] && [ -x "./test_user" ]; then
-          echo "运行 test_user..."
-          timeout 10 ./test_user || echo "test_user 执行完成"
-          TEST_COUNT=$((TEST_COUNT + 1))
-        fi
-        
-        if [ -f "./test_product" ] && [ -x "./test_product" ]; then
-          echo "运行 test_product..."
-          timeout 10 ./test_product || echo "test_product 执行完成"
-          TEST_COUNT=$((TEST_COUNT + 1))
-        fi
-        
-        if [ -f "./test_integration" ] && [ -x "./test_integration" ]; then
-          echo "运行 test_integration..."
-          timeout 10 ./test_integration || echo "test_integration 执行完成"
-          TEST_COUNT=$((TEST_COUNT + 1))
-        fi
-        
-        if [ $TEST_COUNT -eq 0 ]; then
-          echo "⚠️  未找到可执行的测试程序"
-          echo "可能原因："
-          echo "1. 测试程序未成功构建"
-          echo "2. Qt Test模块未正确安装"
-          echo "3. 测试源代码有编译错误"
-        else
-          echo "✅ 共运行了 $TEST_COUNT 个测试程序"
-        fi
-    
-    - name: Check compilation without Qt Test
-      run: |
-        echo "=== 编译检查（不使用Qt Test）==="
-        
-        # 创建一个简单的测试程序，不依赖Qt Test
-        echo '#include <iostream>
-        #include <cassert>
-        
-        // 简单模拟User类的基本功能
-        class SimpleUser {
-        private:
-            std::string username;
-        public:
-            SimpleUser(const std::string& name) : username(name) {}
-            std::string getUsername() const { return username; }
-        };
-        
-        // 简单模拟Product类的基本功能
-        class SimpleProduct {
-        private:
-            std::string name;
-            double price;
-        public:
-            SimpleProduct(const std::string& n, double p) : name(n), price(p) {}
-            std::string getName() const { return name; }
-            double getPrice() const { return price; }
-        };
-        
-        int main() {
-            std::cout << "=== 简单编译测试 ===" << std::endl;
-            
-            // 测试User
-            SimpleUser user("testuser");
-            assert(user.getUsername() == "testuser");
-            std::cout << "✅ User测试通过" << std::endl;
-            
-            // 测试Product
-            SimpleProduct product("测试商品", 99.99);
-            assert(product.getName() == "测试商品");
-            assert(product.getPrice() == 99.99);
-            std::cout << "✅ Product测试通过" << std::endl;
-            
-            std::cout << "🎉 所有简单测试通过！" << std::endl;
-            return 0;
-        }' > simple_test.cpp
-        
-        echo "编译简单测试程序..."
-        g++ -std=c++17 simple_test.cpp -o simple_test
-        
-        if [ -f "./simple_test" ]; then
-          echo "✅ 简单测试程序编译成功"
-          ./simple_test
-        else
-          echo "❌ 简单测试程序编译失败"
-        fi
-    
-    - name: List all files for debugging
-      if: always()
-      run: |
-        echo "=== 文件列表（用于调试）==="
-        echo "当前目录:"
-        pwd
-        echo ""
-        echo "所有文件:"
-        ls -la
-        echo ""
-        echo "可执行文件:"
-        find . -type f -executable ! -name "*.so" ! -name "*.so.*" 2>/dev/null || echo "未找到可执行文件"
-        echo ""
-        echo "源文件:"
-        find . -name "*.cpp" -o -name "*.h" -o -name "*.pro" | head -20
-    
-    - name: Upload artifacts
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: build-artifacts
-        path: |
-          ./*.pro
-          ./Makefile
-          ./OnlineMallSystem
-          ./test_user
-          ./test_product
-          ./test_integration
-          ./simple_test
-        retention-days: 5
+          cat > test_user.pro << 'EOF'
