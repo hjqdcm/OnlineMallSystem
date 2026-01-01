@@ -14,22 +14,88 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Install Qt6
-        run: sudo apt-get update && sudo apt-get install -y qt6-base-dev qt6-base-dev-tools
+      - name: Install Qt6 with GUI support
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            qt6-base-dev \
+            qt6-base-dev-tools \
+            qt6-tools-dev \
+            libqt6gui6 \
+            libgl1-mesa-dev
+      
+      - name: Check and fix tests.pro file
+        run: |
+          echo "检查tests.pro文件..."
+          if [ -f "tests.pro" ]; then
+            echo "tests.pro存在，内容:"
+            cat tests.pro
+            
+            # 检查是否包含gui模块
+            if ! grep -q "QT.*+=.*gui" tests.pro && ! grep -q "QT.*+=.*gui" tests.pro; then
+              echo "tests.pro缺少gui模块，添加中..."
+              # 备份原文件
+              cp tests.pro tests.pro.bak
+              # 添加gui模块
+              sed -i '/QT += core testlib/s/$/ gui/' tests.pro
+              echo "修改后的tests.pro:"
+              cat tests.pro
+            else
+              echo "tests.pro已包含gui模块"
+            fi
+          else
+            echo "错误: tests.pro文件不存在"
+            exit 1
+          fi
       
       - name: Build tests
         run: |
+          echo "=== 构建测试 ==="
+          
+          # 查找qmake
+          if command -v qmake6 > /dev/null 2>&1; then
+            QMAKE="qmake6"
+          elif command -v qmake-qt6 > /dev/null 2>&1; then
+            QMAKE="qmake-qt6"
+          elif command -v qmake > /dev/null 2>&1; then
+            QMAKE="qmake"
+          else
+            echo "错误: 找不到qmake"
+            exit 1
+          fi
+          
+          echo "使用qmake: $($QMAKE --version | head -1)"
+          
           mkdir -p build && cd build
-          qmake6 ../tests.pro || qmake-qt6 ../tests.pro || qmake ../tests.pro
+          $QMAKE CONFIG+=testcase CONFIG+=console ../tests.pro
           make -j4
+          
+          echo "构建完成，检查文件:"
+          ls -la
       
       - name: Run tests
         run: |
           cd build
           if [ -f "OnlineMallTests" ]; then
+            echo "=== 运行单元测试 ==="
             ./OnlineMallTests
           else
-            echo "Test executable not found"
-            ls -la
+            echo "错误: 未找到测试可执行文件"
             exit 1
+          fi
+      
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: build/
+          retention-days: 7
+      
+      - name: Restore original tests.pro
+        if: always()
+        run: |
+          if [ -f "tests.pro.bak" ]; then
+            echo "恢复原始tests.pro文件"
+            mv tests.pro.bak tests.pro
           fi
