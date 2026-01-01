@@ -15,28 +15,17 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install Qt 6
+    - name: Install Qt6 and dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y \
           qt6-base-dev \
           qt6-base-dev-tools \
           qt6-tools-dev \
-          qt6-tools-dev-tools \
           libqt6core6 \
           libqt6gui6 \
           libqt6test6 \
-          libgl1-mesa-dev \
-          libxcb-xinerama0-dev
-
-    - name: Debug Qt installation
-      run: |
-        echo "检查Qt安装..."
-        dpkg -l | grep qt6
-        echo "查找qmake..."
-        which qmake || which qmake-qt6
-        echo "查找Qt头文件..."
-        find /usr/include -name "QApplication" 2>/dev/null | head -5
+          libgl1-mesa-dev
 
     - name: Create tests.pro file
       run: |
@@ -64,13 +53,26 @@ INCLUDEPATH += . ..
 
 DESTDIR = $$PWD
 EOF
+        echo "tests.pro 文件创建完成"
+        cat tests.pro
 
     - name: Build tests with qmake
       run: |
-        # 尝试不同的qmake命令
-        QMAKE_CMD="qmake"
-        if ! command -v qmake &> /dev/null; then
+        # 检查Qt安装
+        echo "检查Qt安装..."
+        dpkg -l | grep qt6 | head -10
+        
+        # 查找qmake
+        QMAKE_CMD=""
+        if command -v qmake6 &> /dev/null; then
+          QMAKE_CMD="qmake6"
+        elif command -v qmake-qt6 &> /dev/null; then
           QMAKE_CMD="qmake-qt6"
+        elif command -v qmake &> /dev/null; then
+          QMAKE_CMD="qmake"
+        else
+          echo "错误: 未找到qmake命令"
+          exit 1
         fi
         
         echo "使用 qmake 命令: $QMAKE_CMD"
@@ -95,60 +97,15 @@ EOF
           ./OnlineMallTests
         else
           echo "错误: 未找到测试可执行文件"
-          echo "当前目录内容:"
-          ls -la
+          echo "尝试查找其他可执行文件..."
+          find . -type f -executable
           exit 1
         fi
 
-    - name: Alternative build method if qmake fails
-      if: failure()
-      run: |
-        echo "尝试替代构建方法..."
-        
-        # 创建简单的测试构建脚本
-        cat > build_tests.sh << 'EOF'
-#!/bin/bash
-set -e
-
-echo "编译测试程序..."
-# 设置Qt6的包含路径
-QT_INCLUDE="/usr/include/x86_64-linux-gnu/qt6"
-QT_LIB="/usr/lib/x86_64-linux-gnu"
-
-# 先编译各个源文件
-g++ -std=c++17 -c -I. -I.. -I$QT_INCLUDE -I$QT_INCLUDE/QtCore -I$QT_INCLUDE/QtTest \
-  -fPIC user.cpp -o user.o
-g++ -std=c++17 -c -I. -I.. -I$QT_INCLUDE -I$QT_INCLUDE/QtCore -I$QT_INCLUDE/QtTest \
-  -fPIC product.cpp -o product.o
-g++ -std=c++17 -c -I. -I.. -I$QT_INCLUDE -I$QT_INCLUDE/QtCore -I$QT_INCLUDE/QtTest \
-  -fPIC test_user.cpp -o test_user.o
-g++ -std=c++17 -c -I. -I.. -I$QT_INCLUDE -I$QT_INCLUDE/QtCore -I$QT_INCLUDE/QtTest \
-  -fPIC test_product.cpp -o test_product.o
-g++ -std=c++17 -c -I. -I.. -I$QT_INCLUDE -I$QT_INCLUDE/QtCore -I$QT_INCLUDE/QtTest \
-  -fPIC test_main.cpp -o test_main.o
-
-# 链接
-g++ -std=c++17 \
-  user.o product.o test_user.o test_product.o test_main.o \
-  -L$QT_LIB -lQt6Core -lQt6Test -lpthread \
-  -o OnlineMallTests
-
-echo "编译完成"
-EOF
-        
-        chmod +x build_tests.sh
-        ./build_tests.sh
-        
-        if [ -f "OnlineMallTests" ]; then
-          echo "运行测试..."
-          ./OnlineMallTests
-        fi
-
-    - name: Basic compilation check
-      if: failure()
-      run: |
-        echo "执行基本编译检查..."
-        # 检查是否能编译核心文件
-        g++ -std=c++17 -c user.cpp -o /tmp/user.o 2>&1 | head -20 || true
-        g++ -std=c++17 -c product.cpp -o /tmp/product.o 2>&1 | head -20 || true
-        echo "基本检查完成"
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-output
+        path: build/
+        retention-days: 7
