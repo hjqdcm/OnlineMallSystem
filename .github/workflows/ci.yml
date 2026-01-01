@@ -74,21 +74,40 @@ jobs:
         run: |
           echo "Listing project directory after build:"; ls -la
 
-      - name: Run unit tests
+      - name: Run unit tests (headless)
         run: |
           # The project builds a test runner binary named 'OnlineMallSystem'
           if [ -x ./OnlineMallSystem ]; then
             echo "Running unit tests using ./OnlineMallSystem (headless/offscreen)"
-            # Force Qt to use the offscreen platform plugin to avoid X11 (xcb) dependency in CI
             export QT_QPA_PLATFORM=offscreen
-            # Run tests and generate JUnit XML if supported
-            ./OnlineMallSystem -o junitxml:test_results.xml || {
-              echo "Unit tests failed (non-zero exit)."; exit 1
-            }
+
+            # Run tests, capture output to file and also try to produce junit xml
+            ./OnlineMallSystem -o junitxml:test_results.xml > test_output.log 2>&1
+            RET=$?
+
+            echo "--- TEST OUTPUT (last 200 lines) ---"
+            tail -n 200 test_output.log || true
+            echo "--- END TEST OUTPUT ---"
+
+            # Exit with the test runner exit code to fail CI on test failures
+            if [ $RET -ne 0 ]; then
+              echo "Unit tests failed with exit code $RET"
+              exit $RET
+            fi
+
             echo "Unit tests passed"
           else
             echo "Test runner ./OnlineMallSystem not found or not executable"; exit 1
           fi
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            test_output.log
+            test_results.xml
 
       - name: Smoke test (binary existence)
         run: |
