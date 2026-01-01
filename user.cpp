@@ -19,8 +19,21 @@ bool User::login(const QString& inputUsername, const QString& inputPassword) {
         qDebug() << "User" << username << "login successfully";
         return true;
     }
-    isAuthenticated = false;
-    return false;
+        // Reject empty credentials explicitly
+        if (inputUsername.isEmpty() || inputPassword.isEmpty()) {
+            isAuthenticated = false;
+            qDebug() << "用户" << username << "尝试使用空凭据登录，已拒绝";
+            return false;
+        }
+
+        if (inputUsername == username && inputPassword == password) {
+            isAuthenticated = true;
+            qDebug() << "用户" << username << "登录成功";
+            return true;
+        }
+
+        isAuthenticated = false;
+        return false;
 }
 
 void User::logout() {
