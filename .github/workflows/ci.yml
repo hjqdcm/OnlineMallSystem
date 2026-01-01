@@ -78,10 +78,12 @@ jobs:
         run: |
           # The project builds a test runner binary named 'OnlineMallSystem'
           if [ -x ./OnlineMallSystem ]; then
-            echo "Running unit tests using ./OnlineMallSystem"
-            # Try to produce junit xml output if supported by the test runner
+            echo "Running unit tests using ./OnlineMallSystem (headless/offscreen)"
+            # Force Qt to use the offscreen platform plugin to avoid X11 (xcb) dependency in CI
+            export QT_QPA_PLATFORM=offscreen
+            # Run tests and generate JUnit XML if supported
             ./OnlineMallSystem -o junitxml:test_results.xml || {
-              echo "Unit tests failed (non-zero exit). Showing last 200 lines of output via journal..."; exit 1
+              echo "Unit tests failed (non-zero exit)."; exit 1
             }
             echo "Unit tests passed"
           else
