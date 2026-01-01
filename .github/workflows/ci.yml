@@ -1,0 +1,113 @@
+# .github/workflows/ci.yml
+# 工作流名称：Qt C++网络商场系统持续集成
+name: Qt C++ Online Mall CI
+
+# 触发条件：当代码推送到main分支或创建Pull Request时触发
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+# 工作流包含的任务
+jobs:
+  # 构建和测试任务
+  build-and-test:
+    # 指定运行环境（这里选择Ubuntu最新版）
+    runs-on: ubuntu-latest
+    
+    # 定义步骤
+    steps:
+    # 第一步：检出代码
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # 获取完整历史记录，便于分析
+    
+    # 第二步：设置Qt环境
+    - name: Setup Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: '6.5.0'  # 指定Qt版本
+        host: 'linux'     # 主机平台
+        target: 'desktop' # 目标平台
+        arch: 'gcc_64'    # 架构
+    
+    # 第三步：安装必要的依赖
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          ninja-build \
+          libgl1-mesa-dev \
+          libxkbcommon-dev \
+          libxcb-icccm4-dev \
+          libxcb-image0-dev \
+          libxcb-keysyms1-dev \
+          libxcb-render-util0-dev \
+          libxcb-xinerama0-dev \
+          libxcb-xkb-dev
+        echo "依赖安装完成"
+    
+    # 第四步：配置CMake并构建项目
+    - name: Configure and build with CMake
+      run: |
+        mkdir -p build
+        cd build
+        cmake .. -DCMAKE_PREFIX_PATH=/usr/local/Qt-6.5.0 -DCMAKE_BUILD_TYPE=Release
+        cmake --build . --config Release
+        echo "项目构建成功"
+    
+    # 第五步：运行单元测试
+    - name: Run unit tests
+      run: |
+        cd build
+        if [ -f "./test_user" ]; then
+          echo "运行用户类测试..."
+          ./test_user
+        fi
+        if [ -f "./test_product" ]; then
+          echo "运行商品类测试..."
+          ./test_product
+        fi
+        if [ -f "./test_integration" ]; then
+          echo "运行集成测试..."
+          ./test_integration
+        fi
+        echo "所有测试执行完成"
+    
+    # 第六步：检查编译产物
+    - name: Verify build artifacts
+      run: |
+        echo "检查编译产物..."
+        if [ -f "./build/onlinemall" ] || [ -f "./build/OnlineMallSystem" ]; then
+          echo "✅ 主程序编译成功"
+          ls -la ./build/
+        else
+          echo "❌ 主程序未找到，检查编译输出"
+          ls -la ./build/
+          exit 1
+        fi
+    
+    # 第七步：生成代码覆盖率报告（可选）
+    - name: Generate code coverage
+      if: always()  # 即使测试失败也执行
+      run: |
+        echo "代码覆盖率报告生成中..."
+        # 这里可以添加覆盖率工具，如gcov/lcov
+        # sudo apt-get install -y lcov
+        # lcov --capture --directory . --output-file coverage.info
+        # genhtml coverage.info --output-directory coverage-report
+        echo "覆盖率报告功能已预留"
+    
+    # 第八步：上传测试结果（可选）
+    - name: Upload test results
+      if: always()  # 即使测试失败也执行
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: |
+          ./build/
+        retention-days: 7  # 保留7天

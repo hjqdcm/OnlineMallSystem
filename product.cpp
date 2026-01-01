@@ -108,6 +108,5 @@ QList<Product> ProductCategory::filterProducts(const QList<Product>& products, c
         }
     }
 
-    qDebug() << "按类别" << category << "筛选出" << filteredProducts.size() << "个商品";
     return filteredProducts;
 }

@@ -263,6 +263,7 @@ Makefile: ../../4.pro E:/QT1/6.7.0/mingw_64/mkspecs/win32-g++/qmake.conf E:/QT1/
 		E:/QT1/6.7.0/mingw_64/mkspecs/features/qt_config.prf \
 		E:/QT1/6.7.0/mingw_64/mkspecs/win32-g++/qmake.conf \
 		E:/QT1/6.7.0/mingw_64/mkspecs/features/spec_post.prf \
+		.qmake.stash \
 		E:/QT1/6.7.0/mingw_64/mkspecs/features/exclusive_builds.prf \
 		E:/QT1/6.7.0/mingw_64/mkspecs/features/toolchain.prf \
 		E:/QT1/6.7.0/mingw_64/mkspecs/features/default_pre.prf \
@@ -270,6 +271,7 @@ Makefile: ../../4.pro E:/QT1/6.7.0/mingw_64/mkspecs/win32-g++/qmake.conf E:/QT1/
 		E:/QT1/6.7.0/mingw_64/mkspecs/features/resolve_config.prf \
 		E:/QT1/6.7.0/mingw_64/mkspecs/features/exclusive_builds_post.prf \
 		E:/QT1/6.7.0/mingw_64/mkspecs/features/default_post.prf \
+		E:/QT1/6.7.0/mingw_64/mkspecs/features/testcase.prf \
 		E:/QT1/6.7.0/mingw_64/mkspecs/features/qml_debug.prf \
 		E:/QT1/6.7.0/mingw_64/mkspecs/features/precompile_header.prf \
 		E:/QT1/6.7.0/mingw_64/mkspecs/features/warn_on.prf \
@@ -278,11 +280,12 @@ Makefile: ../../4.pro E:/QT1/6.7.0/mingw_64/mkspecs/win32-g++/qmake.conf E:/QT1/
 		E:/QT1/6.7.0/mingw_64/mkspecs/features/resources_functions.prf \
 		E:/QT1/6.7.0/mingw_64/mkspecs/features/resources.prf \
 		E:/QT1/6.7.0/mingw_64/mkspecs/features/moc.prf \
+		E:/QT1/6.7.0/mingw_64/mkspecs/features/testlib_defines.prf \
+		E:/QT1/6.7.0/mingw_64/mkspecs/features/win32/console.prf \
 		E:/QT1/6.7.0/mingw_64/mkspecs/features/win32/opengl.prf \
 		E:/QT1/6.7.0/mingw_64/mkspecs/features/uic.prf \
 		E:/QT1/6.7.0/mingw_64/mkspecs/features/qmake_use.prf \
 		E:/QT1/6.7.0/mingw_64/mkspecs/features/file_copies.prf \
-		E:/QT1/6.7.0/mingw_64/mkspecs/features/win32/windows.prf \
 		E:/QT1/6.7.0/mingw_64/mkspecs/features/testcase_targets.prf \
 		E:/QT1/6.7.0/mingw_64/mkspecs/features/exceptions.prf \
 		E:/QT1/6.7.0/mingw_64/mkspecs/features/yacc.prf \
@@ -290,9 +293,9 @@ Makefile: ../../4.pro E:/QT1/6.7.0/mingw_64/mkspecs/win32-g++/qmake.conf E:/QT1/
 		../../4.pro \
 		E:/QT1/6.7.0/mingw_64/lib/Qt6Widgets.prl \
 		E:/QT1/6.7.0/mingw_64/lib/Qt6Gui.prl \
+		E:/QT1/6.7.0/mingw_64/lib/Qt6Test.prl \
 		E:/QT1/6.7.0/mingw_64/lib/Qt6Core.prl \
 		E:/QT1/6.7.0/mingw_64/lib/Qt6EntryPoint.prl \
-		.qmake.stash \
 		E:/QT1/6.7.0/mingw_64/mkspecs/features/build_pass.prf
 	$(QMAKE) -o Makefile ..\..\4.pro -spec win32-g++ "CONFIG+=debug" "CONFIG+=qml_debug"
 E:/QT1/6.7.0/mingw_64/mkspecs/features/spec_pre.prf:
@@ -488,6 +491,7 @@ E:/QT1/6.7.0/mingw_64/mkspecs/features/qt_functions.prf:
 E:/QT1/6.7.0/mingw_64/mkspecs/features/qt_config.prf:
 E:/QT1/6.7.0/mingw_64/mkspecs/win32-g++/qmake.conf:
 E:/QT1/6.7.0/mingw_64/mkspecs/features/spec_post.prf:
+.qmake.stash:
 E:/QT1/6.7.0/mingw_64/mkspecs/features/exclusive_builds.prf:
 E:/QT1/6.7.0/mingw_64/mkspecs/features/toolchain.prf:
 E:/QT1/6.7.0/mingw_64/mkspecs/features/default_pre.prf:
@@ -495,6 +499,7 @@ E:/QT1/6.7.0/mingw_64/mkspecs/features/win32/default_pre.prf:
 E:/QT1/6.7.0/mingw_64/mkspecs/features/resolve_config.prf:
 E:/QT1/6.7.0/mingw_64/mkspecs/features/exclusive_builds_post.prf:
 E:/QT1/6.7.0/mingw_64/mkspecs/features/default_post.prf:
+E:/QT1/6.7.0/mingw_64/mkspecs/features/testcase.prf:
 E:/QT1/6.7.0/mingw_64/mkspecs/features/qml_debug.prf:
 E:/QT1/6.7.0/mingw_64/mkspecs/features/precompile_header.prf:
 E:/QT1/6.7.0/mingw_64/mkspecs/features/warn_on.prf:
@@ -503,11 +508,12 @@ E:/QT1/6.7.0/mingw_64/mkspecs/features/qt.prf:
 E:/QT1/6.7.0/mingw_64/mkspecs/features/resources_functions.prf:
 E:/QT1/6.7.0/mingw_64/mkspecs/features/resources.prf:
 E:/QT1/6.7.0/mingw_64/mkspecs/features/moc.prf:
+E:/QT1/6.7.0/mingw_64/mkspecs/features/testlib_defines.prf:
+E:/QT1/6.7.0/mingw_64/mkspecs/features/win32/console.prf:
 E:/QT1/6.7.0/mingw_64/mkspecs/features/win32/opengl.prf:
 E:/QT1/6.7.0/mingw_64/mkspecs/features/uic.prf:
 E:/QT1/6.7.0/mingw_64/mkspecs/features/qmake_use.prf:
 E:/QT1/6.7.0/mingw_64/mkspecs/features/file_copies.prf:
-E:/QT1/6.7.0/mingw_64/mkspecs/features/win32/windows.prf:
 E:/QT1/6.7.0/mingw_64/mkspecs/features/testcase_targets.prf:
 E:/QT1/6.7.0/mingw_64/mkspecs/features/exceptions.prf:
 E:/QT1/6.7.0/mingw_64/mkspecs/features/yacc.prf:
@@ -515,9 +521,9 @@ E:/QT1/6.7.0/mingw_64/mkspecs/features/lex.prf:
 ../../4.pro:
 E:/QT1/6.7.0/mingw_64/lib/Qt6Widgets.prl:
 E:/QT1/6.7.0/mingw_64/lib/Qt6Gui.prl:
+E:/QT1/6.7.0/mingw_64/lib/Qt6Test.prl:
 E:/QT1/6.7.0/mingw_64/lib/Qt6Core.prl:
 E:/QT1/6.7.0/mingw_64/lib/Qt6EntryPoint.prl:
-.qmake.stash:
 E:/QT1/6.7.0/mingw_64/mkspecs/features/build_pass.prf:
 qmake: FORCE
 	@$(QMAKE) -o Makefile ..\..\4.pro -spec win32-g++ "CONFIG+=debug" "CONFIG+=qml_debug"
@@ -529,7 +535,15 @@ all: debug-all release-all  FORCE
 clean: debug-clean release-clean  FORCE
 distclean: debug-distclean release-distclean  FORCE
 	-$(DEL_FILE) Makefile
-	-$(DEL_FILE) .qmake.stash
+	-$(DEL_FILE) F:\4\build\Desktop_Qt_6_7_0_MinGW_64_bit-Debug\target_wrapper.bat .qmake.stash
+
+debug-check:
+	$(MAKE) -f $(MAKEFILE).Debug check
+release-check:
+	$(MAKE) -f $(MAKEFILE).Release check
+check_all: debug-check release-check
+
+check: debug-check
 
 debug-mocclean:
 	$(MAKE) -f $(MAKEFILE).Debug mocclean
@@ -542,8 +556,6 @@ debug-mocables:
 release-mocables:
 	$(MAKE) -f $(MAKEFILE).Release mocables
 mocables: debug-mocables release-mocables
-
-check: first
 
 benchmark: first
 FORCE:

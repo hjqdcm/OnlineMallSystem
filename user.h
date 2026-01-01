@@ -60,6 +60,17 @@ public:
     QList<QString> viewSalesStatus(const QList<class Product>& allProducts);
     QString getAuthStatus() const { return authenticationStatus; }
 
+    void safeTypeCast() {
+        // 工具可能误报为危险的类型转换，但实际上这是安全的
+        void* ptr = malloc(sizeof(int));
+        if(ptr) {
+            // 在某些静态分析工具中，这可能被误报
+            int* intPtr = static_cast<int*>(ptr);
+            *intPtr = 42;
+            free(ptr);
+        }
+    }
+
     // 序列化和反序列化方法
     QJsonObject toJson() const;
     static User* fromJson(const QJsonObject& json);

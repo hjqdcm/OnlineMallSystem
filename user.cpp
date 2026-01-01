@@ -6,7 +6,7 @@
 #include <QJsonDocument>
 #include "product.h"
 
-// User 类实现
+// User class implementation
 User::User(const QString& username, const QString& password, const QString& email)
     : userId(QUuid::createUuid().toString()), username(username), password(password),
     email(email), nickname(username), isAuthenticated(false), authenticationStatus("Approved")
@@ -16,7 +16,7 @@ User::User(const QString& username, const QString& password, const QString& emai
 bool User::login(const QString& inputUsername, const QString& inputPassword) {
     if (inputUsername == username && inputPassword == password) {
         isAuthenticated = true;
-        qDebug() << "用户" << username << "登录成功";
+        qDebug() << "User" << username << "login successfully";
         return true;
     }
     isAuthenticated = false;
@@ -25,115 +25,115 @@ bool User::login(const QString& inputUsername, const QString& inputPassword) {
 
 void User::logout() {
     isAuthenticated = false;
-    qDebug() << "用户" << username << "已登出";
+    qDebug() << "User" << username << "logged out";
 }
 
 bool User::resetPassword(const QString& newPassword) {
     if (newPassword.length() < 6) {
-        qDebug() << "密码长度不足6位";
+        qDebug() << "Password length must be at least 6 characters";
         return false;
     }
 
     password = newPassword;
-    qDebug() << "用户" << username << "密码已重置";
+    qDebug() << "User" << username << "password has been reset";
     return true;
 }
 
 void User::forgetPassword(const QString& inputEmail) {
     if (inputEmail == email) {
-        qDebug() << "密码重置链接已发送到邮箱:" << email;
+        qDebug() << "Password reset link has been sent to email:" << email;
     } else {
-        qDebug() << "邮箱地址不匹配";
+        qDebug() << "Email address does not match";
     }
 }
 
-// 买家功能实现
+// Buyer functions implementation
 QList<QString> User::searchProducts(const QString& keyword) {
-    qDebug() << "用户" << username << "搜索商品:" << keyword;
+    qDebug() << "User" << username << "search for products:" << keyword;
     QList<QString> results;
     return results;
 }
 
 bool User::purchaseProduct(const QString& productId, QList<Product>& allProducts) {
-    qDebug() << "用户" << username << "尝试购买商品:" << productId;
+    qDebug() << "User" << username << "attempts to purchase product:" << productId;
 
-    // 在商品列表中查找商品
+    // Find the product in the product list
     for (Product& product : allProducts) {
         if (product.getProductId() == productId) {
-            // 检查商品是否已售出
+            // Check if the product is already sold
             if (product.getIsSold()) {
-                qDebug() << "商品" << productId << "已被购买";
+                qDebug() << "Product" << productId << "has already been sold";
                 return false;
             }
 
-            // 购买商品
+            // Purchase the product
             product.setBuyerId(userId);
             product.setIsSold(true);
             purchaseHistory.append(productId);
 
-            qDebug() << "用户" << username << "成功购买商品:" << productId;
+            qDebug() << "User" << username << "successfully purchased product:" << productId;
             return true;
         }
     }
 
-    qDebug() << "商品" << productId << "不存在";
+    qDebug() << "Product" << productId << "does not exist";
     return false;
 }
 
 QList<QString> User::viewPurchaseHistory() {
-    qDebug() << "用户" << username << "查看购买历史";
+    qDebug() << "User" << username << "views purchase history";
     return purchaseHistory;
 }
 
 void User::addToFavorites(const QString& productId) {
     if (!favorites.contains(productId)) {
         favorites.append(productId);
-        qDebug() << "商品" << productId << "已添加到收藏夹";
+        qDebug() << "Product" << productId << "has been added to favorites";
     } else {
-        qDebug() << "商品已在收藏夹中";
+        qDebug() << "Product is already in favorites";
     }
 }
 
 QList<QString> User::viewFavorites() {
-    qDebug() << "用户" << username << "查看收藏夹";
+    qDebug() << "User" << username << "views favorites";
     return favorites;
 }
 
-// 卖家功能实现
+// Seller functions implementation
 bool User::publishProduct(const QString& productName, double price, const QString& description,
                           const QString& category, QList<Product>& allProducts, bool isVirtual) {
     if (authenticationStatus != "Approved") {
-        qDebug() << "用户未通过认证，无法发布商品";
+        qDebug() << "User not authenticated, cannot publish product";
         return false;
     }
 
-    // 创建新商品
+    // Create new product
     Product newProduct(productName, price, description, category, userId, username, isVirtual);
     QString productId = newProduct.getProductId();
     publishedProducts.append(productId);
 
-    // 添加到商品列表
+    // Add to product list
     allProducts.append(newProduct);
 
-    qDebug() << "用户" << username << "发布商品:" << productName
-             << "价格:" << price << "类别:" << category;
+    qDebug() << "User" << username << "publishes product:" << productName
+             << "price:" << price << "category:" << category;
 
-    qDebug() << "商品发布成功";
+    qDebug() << "Product published successfully";
     return true;
 }
 
 bool User::publishVirtualProduct(const QString& productName, double price, const QString& description, QList<Product>& allProducts) {
-    qDebug() << "用户" << username << "发布虚拟商品:" << productName;
+    qDebug() << "User" << username << "publishes virtual product:" << productName;
     return publishProduct(productName, price, description, "Virtual", allProducts, true);
 }
 
 QList<QString> User::viewSoldProducts(const QList<Product>& allProducts) {
-    qDebug() << "用户" << username << "查看已售商品";
+    qDebug() << "User" << username << "views sold products";
     QList<QString> soldProducts;
 
     for (const Product& product : allProducts) {
         if (product.getSellerId() == userId && product.getIsSold()) {
-            soldProducts.append(product.getProductName() + " - 买家: " + product.getBuyerId());
+            soldProducts.append(product.getProductName() + " - Buyer: " + product.getBuyerId());
         }
     }
 
@@ -141,7 +141,7 @@ QList<QString> User::viewSoldProducts(const QList<Product>& allProducts) {
 }
 
 QList<QString> User::viewSalesStatus(const QList<Product>& allProducts) {
-    qDebug() << "用户" << username << "查看销售状态";
+    qDebug() << "User" << username << "views sales status";
 
     int totalSold = 0;
     int totalForSale = 0;
@@ -159,9 +159,9 @@ QList<QString> User::viewSalesStatus(const QList<Product>& allProducts) {
     }
 
     QList<QString> salesStatus;
-    salesStatus.append(QString("总销售额: ¥%1").arg(totalRevenue));
-    salesStatus.append(QString("已售商品: %1件").arg(totalSold));
-    salesStatus.append(QString("待售商品: %1件").arg(totalForSale));
+    salesStatus.append(QString("Total revenue: ¥%1").arg(totalRevenue));
+    salesStatus.append(QString("Sold products: %1 items").arg(totalSold));
+    salesStatus.append(QString("Products for sale: %1 items").arg(totalForSale));
 
     return salesStatus;
 }

@@ -1,0 +1,11 @@
+debug/mainwindow.o
+debug/product.o
+debug/test_integration.o
+debug/test_integration_main.o
+debug/test_product.o
+debug/test_user.o
+debug/user.o
+debug/moc_mainwindow.o
+debug/moc_test_integration.o
+debug/moc_test_product.o
+debug/moc_test_user.o

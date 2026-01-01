@@ -1,0 +1,11 @@
+release/mainwindow.o
+release/product.o
+release/test_integration.o
+release/test_integration_main.o
+release/test_product.o
+release/test_user.o
+release/user.o
+release/moc_mainwindow.o
+release/moc_test_integration.o
+release/moc_test_product.o
+release/moc_test_user.o
