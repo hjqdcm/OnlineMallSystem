@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by QtCreator 13.0.1, 2026-01-01T14:49:10. -->
+<!-- Written by QtCreator 13.0.1, 2026-01-02T00:21:14. -->
 <qtcreator>
  <data>
   <variable>EnvironmentId</variable>
@@ -70,8 +70,40 @@
     <value type="bool" key="AutoTest.Framework.QtTest">true</value>
    </valuemap>
    <valuemap type="QVariantMap" key="AutoTest.CheckStates">
-    <value type="Qt::CheckState" key="1@F:/4/test_integration.h:cleanupTestCase">Unchecked</value>
-    <value type="Qt::CheckState" key="1@F:/4/test_integration.h:initTestCase">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_product.h:TestProduct">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_product.h:testAddImage">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_product.h:testConstructor">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_product.h:testDisplayInfo">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_product.h:testEmptyStrings">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_product.h:testFilterProducts">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_product.h:testFromJson">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_product.h:testFromJsonOldFormat">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_product.h:testLargePrice">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_product.h:testProductCategory">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_product.h:testSetBuyer">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_product.h:testSetPromotional">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_product.h:testSoldProduct">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_product.h:testToJson">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_product.h:testVirtualProduct">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_product.h:testZeroPrice">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_user.h:TestUser">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_user.h:testAddToFavorites">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_user.h:testConstructor">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_user.h:testEmptyInput">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_user.h:testFromJson">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_user.h:testLoginFailure">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_user.h:testLoginSuccess">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_user.h:testLogout">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_user.h:testNegativePrice">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_user.h:testPublishProduct">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_user.h:testPurchaseAlreadySold">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_user.h:testPurchaseProduct">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_user.h:testResetPasswordInvalid">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_user.h:testResetPasswordValid">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_user.h:testToJson">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_user.h:testViewPurchaseHistory">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_user.h:testViewSalesStatus">Unchecked</value>
+    <value type="Qt::CheckState" key="1@F:/4/test_user.h:testViewSoldProducts">Unchecked</value>
    </valuemap>
    <value type="int" key="AutoTest.RunAfterBuild">0</value>
    <value type="bool" key="AutoTest.UseGlobal">true</value>
@@ -87,6 +119,10 @@
     <valuelist type="QVariantList" key="ClangTools.SelectedFiles"/>
     <valuelist type="QVariantList" key="ClangTools.SuppressedDiagnostics"/>
     <value type="bool" key="ClangTools.UseGlobalSettings">false</value>
+   </valuemap>
+   <valuemap type="QVariantMap" key="ClangdSettings">
+    <value type="bool" key="blockIndexing">true</value>
+    <value type="bool" key="useGlobalSettings">true</value>
    </valuemap>
   </valuemap>
  </data>

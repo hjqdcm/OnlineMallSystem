@@ -26,7 +26,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Set up Qt
-      uses: jurplel/install-qt-action@v3
+      uses: jurplel/install-qt-action@v4
       with:
         version: ${{ env.QT_VERSION }}
         host: 'linux'   # 如果需要在其他平台测试，可以修改
@@ -34,7 +34,7 @@ jobs:
         arch: 'gcc_64'
 
     - name: Cache Qt installation
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: /opt/qt
         key: ${{ runner.os }}-qt-${{ env.QT_VERSION }}-${{ hashFiles('OnlineMallSystem.pro') }}
@@ -125,7 +125,7 @@ jobs:
       run: |
         sudo apt-get install -y valgrind
         export PATH="/opt/qt/${{ env.QT_VERSION }}/gcc_64/bin:$PATH"
-        export LD_LIBRARY_PATH="/opt/qt/${{ env.QT_VERSION }}/gcc_64/lib:$LD_LIBRRARY_PATH"
+        export LD_LIBRARY_PATH="/opt/qt/${{ env.QT_VERSION }}/gcc_64/lib:$LD_LIBRARY_PATH"
         cd build
         # 使用valgrind检查测试程序的内存问题
         if [ -f "OnlineMallSystemTests" ]; then
@@ -134,7 +134,7 @@ jobs:
 
     - name: Upload test results
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: test-results-${{ runner.os }}
         path: |
@@ -152,10 +152,10 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Setup MSVC
-      uses: microsoft/setup-msbuild@v1
+      uses: microsoft/setup-msbuild@v2
 
     - name: Setup Qt (Windows)
-      uses: jurplel/install-qt-action@v3
+      uses: jurplel/install-qt-action@v4
       with:
         version: ${{ env.QT_VERSION }}
         host: 'windows'
