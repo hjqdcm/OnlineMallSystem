@@ -74,6 +74,20 @@ jobs:
         run: |
           echo "Listing project directory after build:"; ls -la
 
+      - name: Run unit tests
+        run: |
+          # The project builds a test runner binary named 'OnlineMallSystem'
+          if [ -x ./OnlineMallSystem ]; then
+            echo "Running unit tests using ./OnlineMallSystem"
+            # Try to produce junit xml output if supported by the test runner
+            ./OnlineMallSystem -o junitxml:test_results.xml || {
+              echo "Unit tests failed (non-zero exit). Showing last 200 lines of output via journal..."; exit 1
+            }
+            echo "Unit tests passed"
+          else
+            echo "Test runner ./OnlineMallSystem not found or not executable"; exit 1
+          fi
+
       - name: Smoke test (binary existence)
         run: |
           BIN=$(find . -maxdepth 3 -type f -perm -111 -print | head -n 1 || true)
