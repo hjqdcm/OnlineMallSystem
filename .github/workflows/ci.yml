@@ -2,9 +2,9 @@ name: CI - Unit Tests
 
 on:
   push:
-    branches: [ main, master, develop ]
+    branches: [main, master, develop]
   pull_request:
-    branches: [ main, master, develop ]
+    branches: [main, master, develop]
   workflow_dispatch:
 
 jobs:
@@ -12,24 +12,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Install Qt6 and dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          qt6-base-dev \
-          qt6-base-dev-tools \
-          qt6-tools-dev \
-          libqt6core6 \
-          libqt6gui6 \
-          libqt6test6 \
-          libgl1-mesa-dev
+      - name: Install Qt6 and dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qt6-base-dev qt6-base-dev-tools qt6-tools-dev libqt6core6 libqt6gui6 libqt6test6 libgl1-mesa-dev
 
-    - name: Create tests.pro file
-      run: |
-        cat > tests.pro << 'EOF'
+      - name: Create tests.pro file
+        run: |
+          cat > tests.pro << 'EOF'
 QT += core testlib
 
 CONFIG += c++17 testcase console
@@ -53,59 +46,53 @@ INCLUDEPATH += . ..
 
 DESTDIR = $$PWD
 EOF
-        echo "tests.pro 文件创建完成"
-        cat tests.pro
+          echo "tests.pro 文件创建完成"
 
-    - name: Build tests with qmake
-      run: |
-        # 检查Qt安装
-        echo "检查Qt安装..."
-        dpkg -l | grep qt6 | head -10
-        
-        # 查找qmake
-        QMAKE_CMD=""
-        if command -v qmake6 &> /dev/null; then
-          QMAKE_CMD="qmake6"
-        elif command -v qmake-qt6 &> /dev/null; then
-          QMAKE_CMD="qmake-qt6"
-        elif command -v qmake &> /dev/null; then
-          QMAKE_CMD="qmake"
-        else
-          echo "错误: 未找到qmake命令"
-          exit 1
-        fi
-        
-        echo "使用 qmake 命令: $QMAKE_CMD"
-        $QMAKE_CMD --version
-        
-        # 创建构建目录
-        mkdir -p build
-        cd build
-        
-        # 配置和构建
-        $QMAKE_CMD CONFIG+=testcase CONFIG+=console ../tests.pro
-        make -j$(nproc)
-        
-        echo "构建完成，检查文件:"
-        ls -la
+      - name: Build tests with qmake
+        run: |
+          echo "检查Qt安装..."
+          dpkg -l | grep qt6 | head -5
+          
+          if command -v qmake6 > /dev/null 2>&1; then
+            QMAKE_CMD="qmake6"
+          elif command -v qmake-qt6 > /dev/null 2>&1; then
+            QMAKE_CMD="qmake-qt6"
+          elif command -v qmake > /dev/null 2>&1; then
+            QMAKE_CMD="qmake"
+          else
+            echo "错误: 未找到qmake命令"
+            exit 1
+          fi
+          
+          echo "使用 qmake 命令: $QMAKE_CMD"
+          $QMAKE_CMD --version
+          
+          mkdir -p build
+          cd build
+          
+          $QMAKE_CMD CONFIG+=testcase CONFIG+=console ../tests.pro
+          make -j$(nproc)
+          
+          echo "构建完成，检查文件:"
+          ls -la
 
-    - name: Run tests
-      run: |
-        cd build
-        if [ -f "OnlineMallTests" ]; then
-          echo "=== 运行单元测试 ==="
-          ./OnlineMallTests
-        else
-          echo "错误: 未找到测试可执行文件"
-          echo "尝试查找其他可执行文件..."
-          find . -type f -executable
-          exit 1
-        fi
+      - name: Run tests
+        run: |
+          cd build
+          if [ -f "OnlineMallTests" ]; then
+            echo "=== 运行单元测试 ==="
+            ./OnlineMallTests
+          else
+            echo "错误: 未找到测试可执行文件"
+            echo "尝试查找其他可执行文件..."
+            find . -type f -executable
+            exit 1
+          fi
 
-    - name: Upload test results
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-output
-        path: build/
-        retention-days: 7
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output
+          path: build/
+          retention-days: 7
