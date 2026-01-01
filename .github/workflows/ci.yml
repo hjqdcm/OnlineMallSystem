@@ -17,18 +17,22 @@ jobs:
       - name: Install Qt and build dependencies
         run: |
           sudo apt-get update
-          # Try to install Qt6 packages (may vary across runners); also install generic build tools
-          sudo apt-get install -y build-essential g++ make libxcb-xinerama0 libfontconfig1 \
-            qt6-base-dev qt6-base-dev-tools qt6-qmake || true
-          # Ensure qmake or qmake6 is available
-          if command -v qmake6 >/dev/null 2>&1; then
-            echo "Using qmake6"
-          elif command -v qmake >/dev/null 2>&1; then
-            echo "Using qmake"
-          else
-            echo "qmake not found: attempting to install qtchooser and qt5-qmake"
-            sudo apt-get install -y qtchooser qt5-qmake || true
-          fi
+          # Install common build tools
+          sudo apt-get install -y build-essential g++ make libxcb-xinerama0 libfontconfig1 || true
+
+          # Attempt to install Qt6 packages (may not be available on all runners)
+          sudo apt-get install -y qt6-base-dev qt6-base-dev-tools qt6-qmake || true
+
+          # Also install Qt5 qmake as a broadly available fallback
+          sudo apt-get install -y qtbase5-dev qt5-qmake qtchooser || true
+
+      - name: QMake / Qt debug info
+        run: |
+          echo "Which qmake:"; which qmake || true
+          echo "Which qmake6:"; which qmake6 || true
+          echo "qmake -v:"; qmake -v || true
+          echo "qmake6 -v:"; qmake6 -v || true
+          echo "qtchooser -print-env:"; qtchooser -print-env || true
 
       - name: Locate .pro file
         id: find-pro
