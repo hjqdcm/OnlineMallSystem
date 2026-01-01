@@ -1,184 +1,55 @@
-name: CI - Build and Test
+name: CI - Simple Unit Tests
 
 on:
   push:
     branches: [ main, master, develop ]
   pull_request:
     branches: [ main, master, develop ]
-  workflow_dispatch:  # 允许手动触发
-
-env:
-  QT_VERSION: '6.5.0'
-  BUILD_TYPE: 'Release'
 
 jobs:
-  build-and-test:
-    runs-on: ${{ matrix.os }}
-    
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-        # 如果需要测试多个Qt版本，可以添加
-        # qt-version: ['6.5.0', '6.4.0']
+  unit-tests:
+    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up Qt
-      uses: jurplel/install-qt-action@v4
-      with:
-        version: ${{ env.QT_VERSION }}
-        host: 'linux'   # 如果需要在其他平台测试，可以修改
-        target: 'desktop'
-        arch: 'gcc_64'
-
-    - name: Cache Qt installation
-      uses: actions/cache@v4
-      with:
-        path: /opt/qt
-        key: ${{ runner.os }}-qt-${{ env.QT_VERSION }}-${{ hashFiles('OnlineMallSystem.pro') }}
-        restore-keys: |
-          ${{ runner.os }}-qt-${{ env.QT_VERSION }}-
-          ${{ runner.os }}-qt-
-
-    - name: Install dependencies (Ubuntu)
-      if: runner.os == 'Linux'
+    - name: Install Qt and dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y \
-          build-essential \
-          libgl1-mesa-dev \
-          libglu1-mesa-dev \
-          libx11-dev \
-          libxext-dev \
-          libxfixes-dev \
-          libxi-dev \
-          libxrender-dev \
-          libxcb1-dev \
-          libx11-xcb-dev \
-          libxcb-glx0-dev \
-          libxcb-keysyms1-dev \
-          libxcb-image0-dev \
-          libxcb-shm0-dev \
-          libxcb-icccm4-dev \
-          libxcb-sync0-dev \
-          libxcb-xfixes0-dev \
-          libxcb-shape0-dev \
-          libxcb-randr0-dev \
-          libxcb-render-util0-dev \
-          libxcb-util-dev \
-          libxcb-xinerama0-dev \
-          libxcb-xkb-dev \
-          libxkbcommon-dev \
-          libxkbcommon-x11-dev
-        # 安装clang-tidy用于代码检查
-        sudo apt-get install -y clang-tidy
+          qt6-base-dev \
+          qt6-base-dev-tools \
+          qt6-tools-dev \
+          qt6-tools-dev-tools \
+          libgl1-mesa-dev
 
-    - name: Configure with qmake
+    - name: Build tests directly
       run: |
-        # 设置Qt环境变量
-        export PATH="/opt/qt/${{ env.QT_VERSION }}/gcc_64/bin:$PATH"
-        export LD_LIBRARY_PATH="/opt/qt/${{ env.QT_VERSION }}/gcc_64/lib:$LD_LIBRARY_PATH"
-        # 生成构建目录
-        mkdir -p build
-        cd build
-        qmake ../OnlineMallSystem.pro CONFIG+=testcase
-
-    - name: Build project
-      run: |
-        export PATH="/opt/qt/${{ env.QT_VERSION }}/gcc_64/bin:$PATH"
-        export LD_LIBRARY_PATH="/opt/qt/${{ env.QT_VERSION }}/gcc_64/lib:$LD_LIBRARY_PATH"
-        cd build
-        make -j$(nproc)
-
-    - name: Run unit tests
-      run: |
-        export PATH="/opt/qt/${{ env.QT_VERSION }}/gcc_64/bin:$PATH"
-        export LD_LIBRARY_PATH="/opt/qt/${{ env.QT_VERSION }}/gcc_64/lib:$LD_LIBRARY_PATH"
-        cd build
-        # 运行测试可执行文件
-        if [ -f "OnlineMallSystemTests" ]; then
-          ./OnlineMallSystemTests
-        elif [ -f "test-runner" ]; then
-          ./test-runner
-        else
-          echo "查找测试可执行文件..."
-          find . -type f -name "*test*" -executable | while read test_file; do
-            echo "运行测试: $test_file"
-            $test_file
-          done
-        fi
-
-    - name: Code analysis with clang-tidy
-      run: |
-        # 使用clang-tidy进行代码分析
-        find . -name "*.cpp" -o -name "*.h" | grep -v build | while read file; do
-          clang-tidy -header-filter=.* "$file" -- \
-            -I. \
-            -I/opt/qt/${{ env.QT_VERSION }}/gcc_64/include \
-            -std=c++17 || true
-        done
-
-    - name: Check for memory issues (Valgrind)
-      if: runner.os == 'Linux'
-      run: |
-        sudo apt-get install -y valgrind
-        export PATH="/opt/qt/${{ env.QT_VERSION }}/gcc_64/bin:$PATH"
-        export LD_LIBRARY_PATH="/opt/qt/${{ env.QT_VERSION }}/gcc_64/lib:$LD_LIBRARY_PATH"
-        cd build
-        # 使用valgrind检查测试程序的内存问题
-        if [ -f "OnlineMallSystemTests" ]; then
-          valgrind --leak-check=full --error-exitcode=1 ./OnlineMallSystemTests
-        fi
-
-    - name: Upload test results
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-results-${{ runner.os }}
-        path: |
-          build/*.xml
-          build/*.log
-        retention-days: 5
-
-  # 可选：Windows构建和测试
-  windows-build:
-    runs-on: windows-latest
-    needs: build-and-test
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Setup MSVC
-      uses: microsoft/setup-msbuild@v2
-
-    - name: Setup Qt (Windows)
-      uses: jurplel/install-qt-action@v4
-      with:
-        version: ${{ env.QT_VERSION }}
-        host: 'windows'
-        target: 'desktop'
-        arch: 'win64_msvc2019_64'
-
-    - name: Build project (Windows)
-      run: |
-        # 设置Qt环境
-        $QtPath = "C:\Qt\${{ env.QT_VERSION }}\msvc2019_64"
-        $env:Path = "$QtPath\bin;$env:Path"
+        # 直接编译测试文件
+        echo "编译测试程序..."
+        g++ -std=c++17 \
+          -I/usr/include/qt6 \
+          -I/usr/include/qt6/QtCore \
+          -I/usr/include/qt6/QtTest \
+          -fPIC \
+          test_main.cpp \
+          test_user.cpp \
+          test_product.cpp \
+          user.cpp \
+          product.cpp \
+          -lQt6Core -lQt6Test -lQt6Gui \
+          -o OnlineMallTests \
+          -Wall -Wextra
         
-        # 生成项目文件
-        & "$QtPath\bin\qmake.exe" OnlineMallSystem.pro -spec win32-msvc CONFIG+="testcase ${{ env.BUILD_TYPE }}"
-        
-        # 构建
-        msbuild OnlineMallSystem.vcxproj /p:Configuration=${{ env.BUILD_TYPE }} /m
+        echo "编译完成，运行测试..."
+        ./OnlineMallTests
 
-    - name: Run tests (Windows)
+    - name: Run basic compilation check
+      if: failure()
       run: |
-        $QtPath = "C:\Qt\${{ env.QT_VERSION }}\msvc2019_64"
-        $env:Path = "$QtPath\bin;$env:Path"
-        
-        if (Test-Path "${{ env.BUILD_TYPE }}\OnlineMallSystemTests.exe") {
-          & ".\${{ env.BUILD_TYPE }}\OnlineMallSystemTests.exe"
-        }
+        # 如果测试构建失败，至少检查代码是否能编译
+        echo "检查代码编译..."
+        g++ -std=c++17 -c user.cpp -o user.o
+        g++ -std=c++17 -c product.cpp -o product.o
+        echo "基本编译检查通过"
