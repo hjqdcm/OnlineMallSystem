@@ -14,88 +14,130 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Install Qt6 with GUI support
+      - name: Install Qt6
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             qt6-base-dev \
             qt6-base-dev-tools \
             qt6-tools-dev \
+            qt6-qmake \
             libqt6gui6 \
             libgl1-mesa-dev
       
-      - name: Check and fix tests.pro file
+      - name: Verify environment
         run: |
-          echo "检查tests.pro文件..."
-          if [ -f "tests.pro" ]; then
-            echo "tests.pro存在，内容:"
-            cat tests.pro
-            
-            # 检查是否包含gui模块
-            if ! grep -q "QT.*+=.*gui" tests.pro && ! grep -q "QT.*+=.*gui" tests.pro; then
-              echo "tests.pro缺少gui模块，添加中..."
-              # 备份原文件
-              cp tests.pro tests.pro.bak
-              # 添加gui模块
-              sed -i '/QT += core testlib/s/$/ gui/' tests.pro
-              echo "修改后的tests.pro:"
-              cat tests.pro
-            else
-              echo "tests.pro已包含gui模块"
-            fi
-          else
-            echo "错误: tests.pro文件不存在"
-            exit 1
-          fi
-      
-      - name: Build tests
-        run: |
-          echo "=== 构建测试 ==="
-          
-          # 查找qmake
-          if command -v qmake6 > /dev/null 2>&1; then
-            QMAKE="qmake6"
-          elif command -v qmake-qt6 > /dev/null 2>&1; then
-            QMAKE="qmake-qt6"
-          elif command -v qmake > /dev/null 2>&1; then
-            QMAKE="qmake"
-          else
-            echo "错误: 找不到qmake"
-            exit 1
-          fi
-          
-          echo "使用qmake: $($QMAKE --version | head -1)"
-          
-          mkdir -p build && cd build
-          $QMAKE CONFIG+=testcase CONFIG+=console ../tests.pro
-          make -j4
-          
-          echo "构建完成，检查文件:"
+          echo "=== 环境检查 ==="
+          echo "当前目录: $(pwd)"
+          echo "文件列表:"
           ls -la
-      
-      - name: Run tests
-        run: |
-          cd build
-          if [ -f "OnlineMallTests" ]; then
-            echo "=== 运行单元测试 ==="
-            ./OnlineMallTests
+          echo ""
+          echo "检查qmake:"
+          which qmake6 || which qmake-qt6 || which qmake || echo "qmake未找到"
+          echo ""
+          echo "检查tests.pro:"
+          if [ -f "tests.pro" ]; then
+            cat tests.pro
           else
-            echo "错误: 未找到测试可执行文件"
+            echo "tests.pro不存在"
             exit 1
           fi
       
-      - name: Upload build artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-output
-          path: build/
-          retention-days: 7
-      
-      - name: Restore original tests.pro
-        if: always()
+      - name: Build with debug info
         run: |
-          if [ -f "tests.pro.bak" ]; then
-            echo "恢复原始tests.pro文件"
-            mv tests.pro.bak tests.pro
+          echo "=== 开始构建 ==="
+          
+          # 创建干净的构建目录
+          rm -rf build
+          mkdir -p build
+          cd build
+          
+          # 使用 qmake
+          QMAKE_CMD=""
+          if command -v qmake6 &> /dev/null; then
+            QMAKE_CMD="qmake6"
+          elif command -v qmake-qt6 &> /dev/null; then
+            QMAKE_CMD="qmake-qt6"
+          elif command -v qmake &> /dev/null; then
+            QMAKE_CMD="qmake"
+          else
+            echo "错误: 找不到qmake命令"
+            exit 1
           fi
+          
+          echo "使用: $QMAKE_CMD"
+          $QMAKE_CMD --version
+          
+          # 生成Makefile，使用详细输出
+          echo "生成Makefile..."
+          $QMAKE_CMD CONFIG+=testcase CONFIG+=console ../tests.pro
+          
+          echo "Makefile内容预览:"
+          head -50 Makefile
+          
+          # 构建，使用详细输出
+          echo "开始构建..."
+          make -j4 V=1
+          
+          echo "构建完成，当前目录内容:"
+          ls -la
+          
+          echo "查找所有可执行文件:"
+          find . -type f -executable 2>/dev/null || echo "无执行文件"
+          
+          echo "查找包含 'test' 的文件:"
+          find . -type f -name "*test*" 2>/dev/null | head -10
+      
+      - name: Find and run test executable
+        run: |
+          echo "=== 查找并运行测试 ==="
+          cd build
+          
+          # 尝试不同的可执行文件名
+          TEST_EXEC=""
+          for name in OnlineMallTests OnlineMallSystemTests test_main test_user test_product; do
+            if [ -f "$name" ] && [ -x "$name" ]; then
+              TEST_EXEC="$name"
+              break
+            fi
+          done
+          
+          if [ -z "$TEST_EXEC" ]; then
+            echo "错误: 未找到任何测试可执行文件"
+            echo "当前目录内容:"
+            ls -la
+            echo "所有文件:"
+            find . -type f
+            exit 1
+          fi
+          
+          echo "找到测试可执行文件: $TEST_EXEC"
+          echo "运行测试..."
+          ./"$TEST_EXEC"
+      
+      - name: Check for object files if no executable
+        if: failure()
+        run: |
+          echo "=== 检查构建产物 ==="
+          cd build
+          echo "Object文件:"
+          find . -name "*.o" | head -10
+          echo "Makefile状态:"
+          make -n || true
+      
+      - name: Direct compilation attempt
+        if: failure()
+        run: |
+          echo "=== 尝试直接编译 ==="
+          cd build
+          
+          # 获取编译参数
+          echo "尝试获取编译参数..."
+          make -n 2>&1 | head -20
+          
+          # 尝试直接编译
+          echo "直接编译test_main.cpp..."
+          g++ -std=c++17 -c -I.. -I/usr/include/x86_64-linux-gnu/qt6 \
+              -I/usr/include/x86_64-linux-gnu/qt6/QtCore \
+              -I/usr/include/x86_64-linux-gnu/qt6/QtTest \
+              ../test_main.cpp -o test_main.o 2>&1 | head -20 || true
