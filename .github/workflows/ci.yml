@@ -41,9 +41,26 @@ jobs:
 
       - name: Run qmake
         run: |
-          qmake "$PRO_FILE"
-        env:
-          PRO_FILE: ${{ steps.find-pro.outputs.PRO_FILE }}
+          PRO_FILE="${{ steps.find-pro.outputs.PRO_FILE }}"
+          echo "Using project file: $PRO_FILE"
+          if [ -z "$PRO_FILE" ]; then
+            echo "PRO_FILE is empty"; exit 1
+          fi
+
+          # Detect available qmake implementation and run it. Prefer qmake6.
+          if command -v qmake6 >/dev/null 2>&1; then
+            QMAKE_CMD=qmake6
+          elif command -v qmake >/dev/null 2>&1; then
+            QMAKE_CMD=qmake
+          elif command -v qtchooser >/dev/null 2>&1; then
+            QMAKE_CMD="qtchooser -qt=6 -run-tool=qmake"
+          else
+            echo "No qmake/qmake6/qtchooser found in PATH"; exit 1
+          fi
+
+          echo "Running: $QMAKE_CMD $PRO_FILE"
+          # Use eval to allow composite commands like qtchooser -qt=6 -run-tool=qmake
+          eval "$QMAKE_CMD \"$PRO_FILE\""
 
       - name: Build
         run: |
