@@ -164,48 +164,46 @@ jobs:
         echo "=== 编译检查（不使用Qt Test）==="
         
         # 创建一个简单的测试程序，不依赖Qt Test
-        cat > simple_test.cpp << 'EOF'
-#include <iostream>
-#include <cassert>
-
-// 简单模拟User类的基本功能
-class SimpleUser {
-private:
-    std::string username;
-public:
-    SimpleUser(const std::string& name) : username(name) {}
-    std::string getUsername() const { return username; }
-};
-
-// 简单模拟Product类的基本功能
-class SimpleProduct {
-private:
-    std::string name;
-    double price;
-public:
-    SimpleProduct(const std::string& n, double p) : name(n), price(p) {}
-    std::string getName() const { return name; }
-    double getPrice() const { return price; }
-};
-
-int main() {
-    std::cout << "=== 简单编译测试 ===" << std::endl;
-    
-    // 测试User
-    SimpleUser user("testuser");
-    assert(user.getUsername() == "testuser");
-    std::cout << "✅ User测试通过" << std::endl;
-    
-    // 测试Product
-    SimpleProduct product("测试商品", 99.99);
-    assert(product.getName() == "测试商品");
-    assert(product.getPrice() == 99.99);
-    std::cout << "✅ Product测试通过" << std::endl;
-    
-    std::cout << "🎉 所有简单测试通过！" << std::endl;
-    return 0;
-}
-EOF
+        echo '#include <iostream>
+        #include <cassert>
+        
+        // 简单模拟User类的基本功能
+        class SimpleUser {
+        private:
+            std::string username;
+        public:
+            SimpleUser(const std::string& name) : username(name) {}
+            std::string getUsername() const { return username; }
+        };
+        
+        // 简单模拟Product类的基本功能
+        class SimpleProduct {
+        private:
+            std::string name;
+            double price;
+        public:
+            SimpleProduct(const std::string& n, double p) : name(n), price(p) {}
+            std::string getName() const { return name; }
+            double getPrice() const { return price; }
+        };
+        
+        int main() {
+            std::cout << "=== 简单编译测试 ===" << std::endl;
+            
+            // 测试User
+            SimpleUser user("testuser");
+            assert(user.getUsername() == "testuser");
+            std::cout << "✅ User测试通过" << std::endl;
+            
+            // 测试Product
+            SimpleProduct product("测试商品", 99.99);
+            assert(product.getName() == "测试商品");
+            assert(product.getPrice() == 99.99);
+            std::cout << "✅ Product测试通过" << std::endl;
+            
+            std::cout << "🎉 所有简单测试通过！" << std::endl;
+            return 0;
+        }' > simple_test.cpp
         
         echo "编译简单测试程序..."
         g++ -std=c++17 simple_test.cpp -o simple_test
