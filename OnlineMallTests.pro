@@ -1,6 +1,5 @@
-QT += core gui testlib
-
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+# tests.pro - 专门用于构建和运行测试
+QT += core testlib
 
 CONFIG += c++17 testcase console
 
@@ -19,4 +18,8 @@ HEADERS += \
     user.h \
     product.h
 
-QMAKE_CXXFLAGS += -Wall -Wextra
+# 包含当前目录和上级目录
+INCLUDEPATH += . ..
+
+# 设置输出
+DESTDIR = $$PWD
