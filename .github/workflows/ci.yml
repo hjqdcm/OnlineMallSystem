@@ -14,7 +14,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install build dependencies for Ubuntu 24.04
+    - name: Install Qt for Ubuntu 24.04
       run: |
         sudo apt-get update
         sudo apt-get install -y \
@@ -118,13 +118,3 @@ jobs:
           echo "❌ 找不到测试可执行文件"
           exit 1
         fi
-
-    - name: Upload build artifacts on failure
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: build-failure-logs
-        path: |
-          build/
-          !build/.qmake.stash
-        retention-days: 7
