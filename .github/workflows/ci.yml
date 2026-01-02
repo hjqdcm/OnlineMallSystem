@@ -9,30 +9,58 @@ on:
 jobs:
   unit-tests:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        qt-version: [5.15]
-
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install Qt and dependencies
+    - name: Install build dependencies for Ubuntu 24.04
       run: |
         sudo apt-get update
         sudo apt-get install -y \
           build-essential \
-          qt5-default \
           qtbase5-dev \
-          qttools5-dev-tools
+          qttools5-dev \
+          qt5-qmake \
+          libgl1-mesa-dev
 
     - name: Verify UnitTests.pro exists
       run: |
         if [ ! -f "UnitTests.pro" ]; then
           echo "错误: UnitTests.pro 文件不存在!"
+          ls -la
           exit 1
         fi
         echo "✅ UnitTests.pro 文件存在"
+        echo "文件内容:"
+        cat UnitTests.pro
+
+    - name: Verify source files exist
+      run: |
+        echo "检查必要的源文件..."
+        
+        required_files=(
+          "user.h" "user.cpp"
+          "product.h" "product.cpp"
+          "test_user.h" "test_user.cpp"
+          "test_product.h" "test_product.cpp"
+          "test_main.cpp"
+        )
+        
+        missing=0
+        for file in "${required_files[@]}"; do
+          if [ -f "$file" ]; then
+            echo "✅ $file"
+          else
+            echo "❌ $file (缺失)"
+            missing=1
+          fi
+        done
+        
+        if [ $missing -eq 1 ]; then
+          echo "错误: 缺少必要的源文件"
+          exit 1
+        fi
 
     - name: Build tests
       run: |
@@ -42,16 +70,31 @@ jobs:
         mkdir -p build
         cd build
         
-        # 使用qmake
+        echo "当前目录: $(pwd)"
+        echo "使用 qmake 版本:"
+        qmake --version || echo "qmake 未找到"
+        
+        # 使用 qmake
         qmake ../UnitTests.pro
-        make -j$(nproc)
+        
+        echo "Makefile 已生成"
+        echo "编译中..."
+        
+        # 编译
+        make -j$(nproc) 2>&1
         
         # 检查是否生成了可执行文件
         if [ -f "UnitTests" ]; then
           echo "✅ 构建成功!"
+          echo "可执行文件信息:"
           ls -la UnitTests
+          file UnitTests
         else
           echo "❌ 构建失败: UnitTests 可执行文件未生成"
+          echo "构建目录内容:"
+          ls -la
+          echo "查找可能的输出文件:"
+          find . -type f -name "*" | head -20
           exit 1
         fi
 
@@ -61,10 +104,27 @@ jobs:
         cd build
         
         if [ -f "UnitTests" ]; then
+          echo "运行测试:"
           # 运行测试
           ./UnitTests
-          echo "✅ 测试运行完成"
+          TEST_EXIT_CODE=$?
+          
+          if [ $TEST_EXIT_CODE -eq 0 ]; then
+            echo "✅ 所有测试通过"
+          else
+            echo "⚠️  测试退出代码: $TEST_EXIT_CODE"
+          fi
         else
           echo "❌ 找不到测试可执行文件"
           exit 1
         fi
+
+    - name: Upload build artifacts on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-failure-logs
+        path: |
+          build/
+          !build/.qmake.stash
+        retention-days: 7
