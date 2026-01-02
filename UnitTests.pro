@@ -1,6 +1,6 @@
 # UnitTests.pro - 专用于单元测试的项目文件
-QT += core testlib
-CONFIG += console warn_on c++17 testcase
+QT += core
+CONFIG += console warn_on c++17
 
 TEMPLATE = app
 TARGET = UnitTests

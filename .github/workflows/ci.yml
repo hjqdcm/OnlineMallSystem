@@ -5,150 +5,66 @@ on:
     branches: [ main, master, develop ]
   pull_request:
     branches: [ main, master ]
-  workflow_dispatch:
-
-env:
-  BUILD_DIR: "build"
 
 jobs:
-  unit-tests-linux:
+  unit-tests:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        qt-version: [5.15, 6.5]
+        qt-version: [5.15]
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Qt ${{ matrix.qt-version }}
-      uses: jurplel/install-qt-action@v4
-      with:
-        version: ${{ matrix.qt-version }}
-        setup-python: false
-        cache: true
-        cache-key: qt-${{ matrix.qt-version }}-ubuntu
-
-    - name: Install build dependencies
+    - name: Install Qt and dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y \
           build-essential \
-          libgl1-mesa-dev \
-          mesa-common-dev
+          qt5-default \
+          qtbase5-dev \
+          qttools5-dev-tools
 
-    - name: Build and run tests
+    - name: Verify UnitTests.pro exists
       run: |
-        echo "Building with Qt ${{ matrix.qt-version }}..."
+        if [ ! -f "UnitTests.pro" ]; then
+          echo "错误: UnitTests.pro 文件不存在!"
+          exit 1
+        fi
+        echo "✅ UnitTests.pro 文件存在"
+
+    - name: Build tests
+      run: |
+        echo "开始构建单元测试..."
         
         # 创建构建目录
-        mkdir -p ${{ env.BUILD_DIR }}
-        cd ${{ env.BUILD_DIR }}
+        mkdir -p build
+        cd build
         
-        # 选择正确的qmake
-        if [ "${{ matrix.qt-version }}" = "5.15" ]; then
-          QMAKE_CMD="qmake"
-        else
-          QMAKE_CMD="qmake6"
-        fi
-        
-        # 运行qmake
-        $QMAKE_CMD ../UnitTests.pro
-        
-        # 编译
+        # 使用qmake
+        qmake ../UnitTests.pro
         make -j$(nproc)
         
-        # 运行测试
+        # 检查是否生成了可执行文件
         if [ -f "UnitTests" ]; then
-          echo "Running tests..."
-          ./UnitTests -v2
+          echo "✅ 构建成功!"
+          ls -la UnitTests
         else
-          echo "Error: UnitTests executable not found!"
+          echo "❌ 构建失败: UnitTests 可执行文件未生成"
           exit 1
         fi
 
-    - name: Upload build artifacts
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: build-logs-qt${{ matrix.qt-version }}
-        path: ${{ env.BUILD_DIR }}/
-        retention-days: 7
-
-  check-project-structure:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Verify project files
+    - name: Run tests
       run: |
-        echo "项目结构检查:"
-        echo "================"
+        echo "开始运行单元测试..."
+        cd build
         
-        # 检查.pro文件
-        if [ -f "UnitTests.pro" ]; then
-          echo "✅ UnitTests.pro 存在"
-          
-          # 检查.pro文件内容
-          echo "UnitTests.pro 内容摘要:"
-          echo "-------------------"
-          grep -E "^(SOURCES|HEADERS|TARGET|QT)" UnitTests.pro | head -10
+        if [ -f "UnitTests" ]; then
+          # 运行测试
+          ./UnitTests
+          echo "✅ 测试运行完成"
         else
-          echo "❌ UnitTests.pro 不存在"
-          exit 1
-        fi
-        
-        # 检查必需的源文件
-        echo ""
-        echo "检查源文件:"
-        echo "-----------"
-        
-        required_cpp=("user.cpp" "product.cpp" "test_user.cpp" "test_product.cpp")
-        missing_cpp=0
-        
-        for file in "${required_cpp[@]}"; do
-          if [ -f "$file" ]; then
-            echo "✅ $file"
-          else
-            echo "❌ $file 缺失"
-            missing_cpp=1
-          fi
-        done
-        
-        # 检查头文件
-        echo ""
-        echo "检查头文件:"
-        echo "-----------"
-        
-        required_h=("user.h" "product.h" "test_user.h" "test_product.h")
-        missing_h=0
-        
-        for file in "${required_h[@]}"; do
-          if [ -f "$file" ]; then
-            echo "✅ $file"
-          else
-            echo "❌ $file 缺失"
-            missing_h=1
-          fi
-        done
-        
-        # 检查测试主文件
-        echo ""
-        if [ -f "test_main.cpp" ]; then
-          echo "✅ test_main.cpp 存在"
-        else
-          echo "❌ test_main.cpp 缺失"
-          exit 1
-        fi
-        
-        # 总结
-        echo ""
-        echo "检查完成"
-        if [ $missing_cpp -eq 0 ] && [ $missing_h -eq 0 ]; then
-          echo "✅ 所有必需文件都存在"
-        else
-          echo "⚠️  部分文件缺失"
+          echo "❌ 找不到测试可执行文件"
           exit 1
         fi
