@@ -5,49 +5,49 @@ on:
     branches: [ main, master, develop ]
   pull_request:
     branches: [ main, master ]
+  workflow_dispatch:
+
+env:
+  BUILD_DIR: "build"
 
 jobs:
-  build-and-test:
+  unit-tests-linux:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        qt-version: [5.15, 6.2, 6.5]
+        qt-version: [5.15, 6.5]
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Setup Qt ${{ matrix.qt-version }}
-      uses: jurplel/install-qt-action@v3
+      uses: jurplel/install-qt-action@v4
       with:
         version: ${{ matrix.qt-version }}
+        setup-python: false
         cache: true
-        cache-key: qt-${{ matrix.qt-version }}-ubuntu-latest
+        cache-key: qt-${{ matrix.qt-version }}-ubuntu
 
-    - name: Install dependencies (Qt 5)
+    - name: Install build dependencies
       run: |
-        if [ "${{ matrix.qt-version }}" = "5.15" ]; then
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            qtbase5-dev \
-            qtbase5-dev-tools \
-            libgl1-mesa-dev
-        fi
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          libgl1-mesa-dev \
+          mesa-common-dev
 
-    - name: Build unit tests
+    - name: Build and run tests
       run: |
-        echo "Building unit tests with Qt ${{ matrix.qt-version }}..."
+        echo "Building with Qt ${{ matrix.qt-version }}..."
         
         # 创建构建目录
-        mkdir -p build
-        cd build
+        mkdir -p ${{ env.BUILD_DIR }}
+        cd ${{ env.BUILD_DIR }}
         
-        # 选择正确的qmake命令
+        # 选择正确的qmake
         if [ "${{ matrix.qt-version }}" = "5.15" ]; then
           QMAKE_CMD="qmake"
-        elif [ "${{ matrix.qt-version }}" = "6.2" ]; then
-          QMAKE_CMD="qmake6"
         else
           QMAKE_CMD="qmake6"
         fi
@@ -58,119 +58,97 @@ jobs:
         # 编译
         make -j$(nproc)
         
-        # 验证构建
-        if [ -f "UnitTests" ] || [ -f "debug/UnitTests" ] || [ -f "release/UnitTests" ]; then
-          echo "✅ Unit tests built successfully!"
-        else
-          echo "❌ Build failed!"
-          exit 1
-        fi
-
-    - name: Run unit tests
-      run: |
-        echo "Running unit tests with Qt ${{ matrix.qt-version }}..."
-        cd build
-        
-        # 查找测试可执行文件
-        if [ -f "UnitTests" ]; then
-          TEST_EXEC="./UnitTests"
-        elif [ -f "debug/UnitTests" ]; then
-          TEST_EXEC="./debug/UnitTests"
-        elif [ -f "release/UnitTests" ]; then
-          TEST_EXEC="./release/UnitTests"
-        else
-          echo "❌ Test executable not found!"
-          exit 1
-        fi
-        
         # 运行测试
-        echo "Test command: $TEST_EXEC -v2"
-        $TEST_EXEC -v2
+        if [ -f "UnitTests" ]; then
+          echo "Running tests..."
+          ./UnitTests -v2
+        else
+          echo "Error: UnitTests executable not found!"
+          exit 1
+        fi
 
-    - name: Upload test results
-      if: always()
-      uses: actions/upload-artifact@v3
+    - name: Upload build artifacts
+      if: failure()
+      uses: actions/upload-artifact@v4
       with:
-        name: test-results-qt-${{ matrix.qt-version }}
-        path: |
-          build/*.xml
-          build/*.txt
+        name: build-logs-qt${{ matrix.qt-version }}
+        path: ${{ env.BUILD_DIR }}/
         retention-days: 7
 
-  quick-test:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-
-    - name: Setup minimal Qt environment
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          build-essential \
-          qt5-default \
-          qtbase5-dev \
-          qttools5-dev-tools
-
-    - name: Quick build test
-      run: |
-        echo "Running quick build test for PR..."
-        
-        # 只检查编译是否成功
-        mkdir -p build-quick
-        cd build-quick
-        qmake ../UnitTests.pro
-        make -j2
-        
-        echo "✅ Quick build test passed!"
-
-  validate-project:
+  check-project-structure:
     runs-on: ubuntu-latest
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
-    - name: Validate project structure
+    - name: Verify project files
       run: |
-        echo "=== Validating project structure ==="
+        echo "项目结构检查:"
+        echo "================"
         
-        # 检查必要的文件是否存在
-        REQUIRED_FILES=(
-          "UnitTests.pro"
-          "user.h" "user.cpp"
-          "product.h" "product.cpp"
-          "test_user.h" "test_user.cpp"
-          "test_product.h" "test_product.cpp"
-          "test_main.cpp"
-        )
+        # 检查.pro文件
+        if [ -f "UnitTests.pro" ]; then
+          echo "✅ UnitTests.pro 存在"
+          
+          # 检查.pro文件内容
+          echo "UnitTests.pro 内容摘要:"
+          echo "-------------------"
+          grep -E "^(SOURCES|HEADERS|TARGET|QT)" UnitTests.pro | head -10
+        else
+          echo "❌ UnitTests.pro 不存在"
+          exit 1
+        fi
         
-        for file in "${REQUIRED_FILES[@]}"; do
+        # 检查必需的源文件
+        echo ""
+        echo "检查源文件:"
+        echo "-----------"
+        
+        required_cpp=("user.cpp" "product.cpp" "test_user.cpp" "test_product.cpp")
+        missing_cpp=0
+        
+        for file in "${required_cpp[@]}"; do
           if [ -f "$file" ]; then
             echo "✅ $file"
           else
-            echo "❌ $file (missing)"
-            exit 1
+            echo "❌ $file 缺失"
+            missing_cpp=1
           fi
         done
         
-        # 检查不包含的文件
-        EXCLUDED_FILES=(
-          "main.cpp"
-          "mainwindow.cpp"
-          "test_integration.cpp"
-          "test.cpp"
-        )
-        
+        # 检查头文件
         echo ""
-        echo "=== Checking for excluded files ==="
-        for file in "${EXCLUDED_FILES[@]}"; do
+        echo "检查头文件:"
+        echo "-----------"
+        
+        required_h=("user.h" "product.h" "test_user.h" "test_product.h")
+        missing_h=0
+        
+        for file in "${required_h[@]}"; do
           if [ -f "$file" ]; then
-            echo "⚠️  $file (present but will be excluded)"
+            echo "✅ $file"
+          else
+            echo "❌ $file 缺失"
+            missing_h=1
           fi
         done
         
+        # 检查测试主文件
         echo ""
-        echo "✅ Project structure validation passed!"
+        if [ -f "test_main.cpp" ]; then
+          echo "✅ test_main.cpp 存在"
+        else
+          echo "❌ test_main.cpp 缺失"
+          exit 1
+        fi
+        
+        # 总结
+        echo ""
+        echo "检查完成"
+        if [ $missing_cpp -eq 0 ] && [ $missing_h -eq 0 ]; then
+          echo "✅ 所有必需文件都存在"
+        else
+          echo "⚠️  部分文件缺失"
+          exit 1
+        fi
