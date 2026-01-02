@@ -11,10 +11,6 @@ User::User(const QString& username, const QString& password, const QString& emai
     : userId(QUuid::createUuid().toString()), username(username), password(password),
     email(email), nickname(username), isAuthenticated(false), authenticationStatus("Approved")
 {
-    if(username.isEmpty() || password.isEmpty() || email.isEmpty()) {
-        qDebug() << "Warning: Created user with empty fields";
-        return;
-    }
 }
 
 bool User::login(const QString& inputUsername, const QString& inputPassword) {
@@ -24,7 +20,7 @@ bool User::login(const QString& inputUsername, const QString& inputPassword) {
         return true;
     }
         // Reject empty credentials explicitly
-        if (inputUsername.isEmpty() || inputPassword.isEmpty()) {
+        if (inputUsername.trimmed().isEmpty() || inputPassword.isEmpty()) {
             isAuthenticated = false;
             qDebug() << "用户" << username << "尝试使用空凭据登录，已拒绝";
             return false;
