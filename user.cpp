@@ -11,6 +11,10 @@ User::User(const QString& username, const QString& password, const QString& emai
     : userId(QUuid::createUuid().toString()), username(username), password(password),
     email(email), nickname(username), isAuthenticated(false), authenticationStatus("Approved")
 {
+    if(username.isEmpty() || password.isEmpty() || email.isEmpty()) {
+        qDebug() << "Warning: Created user with empty fields";
+        return;
+    }
 }
 
 bool User::login(const QString& inputUsername, const QString& inputPassword) {
