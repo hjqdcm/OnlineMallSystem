@@ -14,26 +14,21 @@ User::User(const QString& username, const QString& password, const QString& emai
 }
 
 bool User::login(const QString& inputUsername, const QString& inputPassword) {
+    // Reject empty credentials explicitly
+    if (inputUsername.trimmed().isEmpty() || inputPassword.isEmpty()) {
+        isAuthenticated = false;
+        qDebug() << "User" << username << "login unsucessfully";
+        return false;
+    }
+
     if (inputUsername == username && inputPassword == password) {
         isAuthenticated = true;
         qDebug() << "User" << username << "login successfully";
         return true;
     }
-        // Reject empty credentials explicitly
-        if (inputUsername.trimmed().isEmpty() || inputPassword.isEmpty()) {
-            isAuthenticated = false;
-            qDebug() << "用户" << username << "尝试使用空凭据登录，已拒绝";
-            return false;
-        }
 
-        if (inputUsername == username && inputPassword == password) {
-            isAuthenticated = true;
-            qDebug() << "用户" << username << "登录成功";
-            return true;
-        }
-
-        isAuthenticated = false;
-        return false;
+    isAuthenticated = false;
+    return false;
 }
 
 void User::logout() {
