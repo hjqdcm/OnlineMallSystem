@@ -1,143 +1,176 @@
-name: CI - Unit Tests
+name: Unit Tests
 
 on:
   push:
-    branches: [main, master, develop]
+    branches: [ main, master, develop ]
   pull_request:
-    branches: [main, master, develop]
+    branches: [ main, master ]
 
 jobs:
-  unit-tests:
+  build-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        qt-version: [5.15, 6.2, 6.5]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup Qt ${{ matrix.qt-version }}
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: ${{ matrix.qt-version }}
+        cache: true
+        cache-key: qt-${{ matrix.qt-version }}-ubuntu-latest
+
+    - name: Install dependencies (Qt 5)
+      run: |
+        if [ "${{ matrix.qt-version }}" = "5.15" ]; then
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            qtbase5-dev \
+            qtbase5-dev-tools \
+            libgl1-mesa-dev
+        fi
+
+    - name: Build unit tests
+      run: |
+        echo "Building unit tests with Qt ${{ matrix.qt-version }}..."
+        
+        # 创建构建目录
+        mkdir -p build
+        cd build
+        
+        # 选择正确的qmake命令
+        if [ "${{ matrix.qt-version }}" = "5.15" ]; then
+          QMAKE_CMD="qmake"
+        elif [ "${{ matrix.qt-version }}" = "6.2" ]; then
+          QMAKE_CMD="qmake6"
+        else
+          QMAKE_CMD="qmake6"
+        fi
+        
+        # 运行qmake
+        $QMAKE_CMD ../UnitTests.pro
+        
+        # 编译
+        make -j$(nproc)
+        
+        # 验证构建
+        if [ -f "UnitTests" ] || [ -f "debug/UnitTests" ] || [ -f "release/UnitTests" ]; then
+          echo "✅ Unit tests built successfully!"
+        else
+          echo "❌ Build failed!"
+          exit 1
+        fi
+
+    - name: Run unit tests
+      run: |
+        echo "Running unit tests with Qt ${{ matrix.qt-version }}..."
+        cd build
+        
+        # 查找测试可执行文件
+        if [ -f "UnitTests" ]; then
+          TEST_EXEC="./UnitTests"
+        elif [ -f "debug/UnitTests" ]; then
+          TEST_EXEC="./debug/UnitTests"
+        elif [ -f "release/UnitTests" ]; then
+          TEST_EXEC="./release/UnitTests"
+        else
+          echo "❌ Test executable not found!"
+          exit 1
+        fi
+        
+        # 运行测试
+        echo "Test command: $TEST_EXEC -v2"
+        $TEST_EXEC -v2
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results-qt-${{ matrix.qt-version }}
+        path: |
+          build/*.xml
+          build/*.txt
+        retention-days: 7
+
+  quick-test:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup minimal Qt environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          qt5-default \
+          qtbase5-dev \
+          qttools5-dev-tools
+
+    - name: Quick build test
+      run: |
+        echo "Running quick build test for PR..."
+        
+        # 只检查编译是否成功
+        mkdir -p build-quick
+        cd build-quick
+        qmake ../UnitTests.pro
+        make -j2
+        
+        echo "✅ Quick build test passed!"
+
+  validate-project:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Install Qt6
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            qt6-base-dev \
-            qt6-base-dev-tools \
-            qt6-tools-dev \
-            qt6-qmake \
-            libqt6gui6 \
-            libgl1-mesa-dev
-      
-      - name: Verify environment
-        run: |
-          echo "=== 环境检查 ==="
-          echo "当前目录: $(pwd)"
-          echo "文件列表:"
-          ls -la
-          echo ""
-          echo "检查qmake:"
-          which qmake6 || which qmake-qt6 || which qmake || echo "qmake未找到"
-          echo ""
-          echo "检查tests.pro:"
-          if [ -f "tests.pro" ]; then
-            cat tests.pro
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Validate project structure
+      run: |
+        echo "=== Validating project structure ==="
+        
+        # 检查必要的文件是否存在
+        REQUIRED_FILES=(
+          "UnitTests.pro"
+          "user.h" "user.cpp"
+          "product.h" "product.cpp"
+          "test_user.h" "test_user.cpp"
+          "test_product.h" "test_product.cpp"
+          "test_main.cpp"
+        )
+        
+        for file in "${REQUIRED_FILES[@]}"; do
+          if [ -f "$file" ]; then
+            echo "✅ $file"
           else
-            echo "tests.pro不存在"
+            echo "❌ $file (missing)"
             exit 1
           fi
-      
-      - name: Build with debug info
-        run: |
-          echo "=== 开始构建 ==="
-          
-          # 创建干净的构建目录
-          rm -rf build
-          mkdir -p build
-          cd build
-          
-          # 使用 qmake
-          QMAKE_CMD=""
-          if command -v qmake6 &> /dev/null; then
-            QMAKE_CMD="qmake6"
-          elif command -v qmake-qt6 &> /dev/null; then
-            QMAKE_CMD="qmake-qt6"
-          elif command -v qmake &> /dev/null; then
-            QMAKE_CMD="qmake"
-          else
-            echo "错误: 找不到qmake命令"
-            exit 1
+        done
+        
+        # 检查不包含的文件
+        EXCLUDED_FILES=(
+          "main.cpp"
+          "mainwindow.cpp"
+          "test_integration.cpp"
+          "test.cpp"
+        )
+        
+        echo ""
+        echo "=== Checking for excluded files ==="
+        for file in "${EXCLUDED_FILES[@]}"; do
+          if [ -f "$file" ]; then
+            echo "⚠️  $file (present but will be excluded)"
           fi
-          
-          echo "使用: $QMAKE_CMD"
-          $QMAKE_CMD --version
-          
-          # 生成Makefile，使用详细输出
-          echo "生成Makefile..."
-          $QMAKE_CMD CONFIG+=testcase CONFIG+=console ../tests.pro
-          
-          echo "Makefile内容预览:"
-          head -50 Makefile
-          
-          # 构建，使用详细输出
-          echo "开始构建..."
-          make -j4 V=1
-          
-          echo "构建完成，当前目录内容:"
-          ls -la
-          
-          echo "查找所有可执行文件:"
-          find . -type f -executable 2>/dev/null || echo "无执行文件"
-          
-          echo "查找包含 'test' 的文件:"
-          find . -type f -name "*test*" 2>/dev/null | head -10
-      
-      - name: Find and run test executable
-        run: |
-          echo "=== 查找并运行测试 ==="
-          cd build
-          
-          # 尝试不同的可执行文件名
-          TEST_EXEC=""
-          for name in OnlineMallTests OnlineMallSystemTests test_main test_user test_product; do
-            if [ -f "$name" ] && [ -x "$name" ]; then
-              TEST_EXEC="$name"
-              break
-            fi
-          done
-          
-          if [ -z "$TEST_EXEC" ]; then
-            echo "错误: 未找到任何测试可执行文件"
-            echo "当前目录内容:"
-            ls -la
-            echo "所有文件:"
-            find . -type f
-            exit 1
-          fi
-          
-          echo "找到测试可执行文件: $TEST_EXEC"
-          echo "运行测试..."
-          ./"$TEST_EXEC"
-      
-      - name: Check for object files if no executable
-        if: failure()
-        run: |
-          echo "=== 检查构建产物 ==="
-          cd build
-          echo "Object文件:"
-          find . -name "*.o" | head -10
-          echo "Makefile状态:"
-          make -n || true
-      
-      - name: Direct compilation attempt
-        if: failure()
-        run: |
-          echo "=== 尝试直接编译 ==="
-          cd build
-          
-          # 获取编译参数
-          echo "尝试获取编译参数..."
-          make -n 2>&1 | head -20
-          
-          # 尝试直接编译
-          echo "直接编译test_main.cpp..."
-          g++ -std=c++17 -c -I.. -I/usr/include/x86_64-linux-gnu/qt6 \
-              -I/usr/include/x86_64-linux-gnu/qt6/QtCore \
-              -I/usr/include/x86_64-linux-gnu/qt6/QtTest \
-              ../test_main.cpp -o test_main.o 2>&1 | head -20 || true
+        done
+        
+        echo ""
+        echo "✅ Project structure validation passed!"
